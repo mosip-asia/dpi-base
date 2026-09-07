@@ -1,0 +1,7 @@
+project_id                 = "dpi-mgmt"
+region                     = "asia-southeast1"
+domain_name                = "dpi.ait.ac.th."
+
+google_site_verification   = "google-site-verification=rX8xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+google_oauth_client_id     = ""
+google_oauth_client_secret = ""
