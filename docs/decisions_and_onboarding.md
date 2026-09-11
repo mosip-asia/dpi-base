@@ -142,6 +142,21 @@ To prevent accidental outages and credential leaks, we enforce a strict **"Break
   - **Tier 2 (Workloads & Demos)**: `*.demo.dpi.ait.ac.th`. Automated via Kubernetes **`external-dns`** controllers bound strictly to ingress resources. Automatically provisions and cleans up records.
   - **Tier 3 (Developer Sandboxes)**: High-churn development environments receive dedicated subdomain delegations (e.g. `*.sandbox-a.dpi.ait.ac.th` delegated to AWS Route 53 or dedicated test projects) granting team autonomy with zero blast radius to the root apex.
 
+### Decision 7: Sovereign Domain Pattern & Autonomous `*-mgmt` Anchors
+* **Context**: As DPI Center expands to host multiple digital public goods (MOSIP identity demonstrator, DLMS driving licensing, verifiable credentials), consolidating all application state, database credentials, and donor budgets into a single management project (`dpi-mgmt`) creates a catastrophic blast radius, financial entanglement, and repository coupling.
+* **Decision**: We enforce a **Federated Domain Landing Zone Pattern**:
+  - **`dpi-mgmt` is strictly scoped to `dpi-base` only**. The bucket `gs://dpi-mgmt-tfstate` and Secret Manager in `dpi-mgmt` only manage core base infrastructure (`dpi-vpn`, `dpi-kube-ops`, `base.dpi.ait.ac.th`).
+  - **Autonomous Product Domains**: Every product or research initiative receives its own dedicated **GCP Folder** and an anchor project named **`<domain>-mgmt`** (e.g. `mosip/` -> `mosip-mgmt`, `dlms/` -> `dlms-mgmt`).
+  - **Isolated Asset Architecture per Domain**:
+    1. **Dedicated Remote State**: `gs://<domain>-tfstate` (Singapore, versioning ON).
+    2. **Dedicated Secret Manager**: Domain-specific database passwords, signing keys, and certificates.
+    3. **Dedicated Automation SA**: `<domain>-terraform@<domain>-mgmt...` scoped strictly to that product folder.
+    4. **Subdomain Autonomy**: Subdomain `<domain>.demo.dpi.ait.ac.th` delegated to `<domain>-mgmt` Cloud DNS.
+* **Benefits**:
+  1. **Zero Blast Radius**: A mistake or `terraform destroy` in an application domain cannot affect `dpi-base` or another product.
+  2. **Grant & Donor Cost Accounting**: Monthly cloud billing invoices are cleanly grouped by folder for effortless audit and donor grant reporting.
+  3. **Multi-Repo Decoupling**: Application repositories manage their own infrastructure independently without needing IAM access to `dpi-base`.
+
 ---
 
 ## 🛠️ 4. Developer Quickstart for Team Members

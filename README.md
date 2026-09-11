@@ -48,38 +48,55 @@ DPI Center operates as an independent organization with dedicated cloud governan
 
 ---
 
-### 🛡️ Decoupled Infrastructure Model
+### 🛡️ Platform Engine vs. Sovereign Workload Domains
 
-To guarantee 100% uptime, zero single points of failure, and strict cost controls, infrastructure is decoupled into three dedicated GCP projects:
+DPI Center enforces a **Federated Domain Landing Zone Pattern**:
+* **`dpi-base` (This Repository & Folder)**: The **Platform Engine**. Contains only shared network fabric, cluster control, and base infrastructure. The remote state (`gs://dpi-mgmt-tfstate`) and secrets in `dpi-mgmt` are **strictly scoped to `dpi-base` only**.
+* **Workload Domains (`mosip`, `dlms`, etc.)**: Autonomous product initiatives. Each domain receives its own GCP Folder and its own dedicated **`*-mgmt` anchor project** with isolated GCS remote state, Secret Manager, and billing tracking.
 
+```mermaid
+flowchart TD
+    ORG["🏢 Google Cloud Organization: dpi.ait.ac.th (350922776586)"]
+
+    subgraph FOLDER_BASE ["📁 Folder: dpi-base (Platform Provider — THIS REPO)"]
+        direction TB
+        P_MGMT["📦 Project: dpi-mgmt<br/>• gs://dpi-mgmt-tfstate (Base state ONLY)<br/>• Base secrets (OAuth, VPN tokens)<br/>• Subzone: base.dpi.ait.ac.th"]
+        P_VPN["📦 Project: dpi-vpn (24/7 NetBird Mesh VPN)"]
+        P_KUBE["📦 Project: dpi-kube-ops (Rancher & Observability)"]
+    end
+
+    subgraph FOLDER_MOSIP ["📁 Folder: mosip (Identity Domain)"]
+        direction TB
+        M_MGMT["📦 Project: mosip-mgmt<br/>• gs://mosip-tfstate (MOSIP state ONLY)<br/>• MOSIP Secret Manager (DB keys, certs)<br/>• Dedicated mosip-terraform SA"]
+        M_WORK["📦 Project: mosip-sandbox / k3s"]
+    end
+
+    subgraph FOLDER_DLMS ["📁 Folder: dlms (Driving License Domain)"]
+        direction TB
+        D_MGMT["📦 Project: dlms-mgmt<br/>• gs://dlms-tfstate (DLMS state ONLY)<br/>• DLMS Secret Manager<br/>• Dedicated dlms-terraform SA"]
+        D_WORK["📦 Project: dlms-workload / k3s"]
+    end
+
+    ORG --> FOLDER_BASE
+    ORG --> FOLDER_MOSIP
+    ORG --> FOLDER_DLMS
+
+    P_VPN -.->|WireGuard Overlay Mesh| M_WORK
+    P_VPN -.->|WireGuard Overlay Mesh| D_WORK
+    P_KUBE -.->|Kubernetes Management| M_WORK
+    P_KUBE -.->|Kubernetes Management| D_WORK
 ```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                        3-PROJECT DECOUPLED GOVERNANCE MODEL                            │
-└────────────────────────────────────────────────────────────────────────────────────────┘
-                                            │
-          ┌─────────────────────────────────┼─────────────────────────────────┐
-          ▼                                 ▼                                 ▼
-┌──────────────────────────────┐ ┌──────────────────────────────┐ ┌──────────────────────────────┐
-│  ANCHOR PLANE: `dpi-mgmt`    │ │   NETWORK TIER: `dpi-vpn`    │ │ K8S & OBS: `dpi-kube-ops`    │
-├──────────────────────────────┤ ├──────────────────────────────┤ ├──────────────────────────────┤
-│ - Org: `dpi.ait.ac.th`       │ │ - NetBird Mesh VPN (WireGuard│ │ - Rancher Community (MOSIP)  │
-│ - Monthly Cost: ~$0.20/mo    │ │ - 24/7 Always-On (e2-small)  │ │ - VictoriaMetrics & Loki     │
-│ - DNS: Authoritative CloudDNS│ │ - Monthly Cost: ~$14.00/mo   │ │ - Schedulable (e2-standard-4)│
-│ - Terraform Remote State     │ │ - Overlay: 100.64.0.0/16     │ │ - Monthly Cost: ~$25.00/mo   │
-└──────────────────────────────┘ └──────────────────────────────┘ └──────────────────────────────┘
-```
 
-### 🗄️ Centralized Governance vs. Compute Separation Matrix
+### 🗄️ Standard Domain Blueprint (`<domain>-mgmt`)
 
-To eliminate confusion across team members, the table below defines exactly where shared state, DNS records, secrets, and compute workloads reside:
+To ensure zero blast radius, donor grant accounting, and multi-repo autonomy, every new initiative follows this standardized blueprint:
 
-| Infrastructure Asset | Target GCP Project | State / Configuration Location | Architecture & Operational Invariant |
+| Layer | Responsibility | Target Resource | Scope & Isolation Rule |
 | :--- | :--- | :--- | :--- |
-| **Authoritative Cloud DNS (`dpi.ait.ac.th`)** | **`dpi-mgmt`** | `dpi-mgmt/terraform/foundation/dns.tf` | **Centralized in `dpi-mgmt`**. All public subdomains (`vpn.mgmt.*`, `rancher.mgmt.*`, `demo.*`, `api.*`) are provisioned exclusively in the central Cloud DNS zone in `dpi-mgmt`. Sub-projects do not manage public DNS zones. |
-| **Terraform Remote State Backend** | **`dpi-mgmt`** | GCS Bucket: `gs://dpi-mgmt-tfstate` | **Centralized in `dpi-mgmt`**. A single versioned, uniform-access GCS bucket stores state across all three tiers with distinct state prefixes: `foundation/`, `vpn/`, and `kube-ops/`. |
-| **Root Secrets & Master OAuth** | **`dpi-mgmt`** | Google Secret Manager (`dpi-mgmt`) | **Centralized in `dpi-mgmt`**. Organization-level secrets (OAuth credentials, master WireGuard keys, recovery tokens) reside in `dpi-mgmt`. Compute instances read authorized secrets via IAM service accounts. |
-| **Mesh VPN Gateway (NetBird)** | **`dpi-vpn`** | `dpi-vpn/terraform/` & `dpi-vpn/docker/` | **Isolated Compute in `dpi-vpn`**. Minimal `e2-small` VM running 24/7 to maintain the WireGuard overlay network. Pure network fabric; never polluted by Kubernetes or storage state. |
-| **Cluster Ops & Observability (Rancher / Grafana)** | **`dpi-kube-ops`** | `dpi-kube-ops/terraform/` & `helm/` | **Isolated Compute in `dpi-kube-ops`**. Compute instance (`e2-standard-4`) scheduled to sleep when inactive (~65–75% savings). Can be stopped or rebuilt without affecting DNS or mesh VPN. |
+| **Core Base** | Platform & Fabric | **`dpi-base`** (`dpi-mgmt`) | **Strictly scoped to `dpi-base`**. Stores state for VPN, Rancher, and base subzone (`base.dpi.ait.ac.th`). Never holds application secrets. |
+| **Workload Domain** | Product Management | **`<domain>-mgmt`** (e.g. `mosip-mgmt`) | **Autonomous per domain**. Dedicated GCS bucket (`gs://<domain>-tfstate`) and dedicated Secret Manager. Completely isolated from `dpi-mgmt`. |
+| **Workload Compute**| Application Workloads | **`<domain>-*`** (e.g. `mosip-sandbox`) | Research/testbed K3s nodes. Connects to `dpi-vpn` for secure mesh overlay; managed via `dpi-kube-ops`. |
+| **Subdomain Routing**| DNS Namespaces | **`<domain>.demo.dpi.ait.ac.th`** | Delegated via NS records to `<domain>-mgmt` Cloud DNS for autonomous record management. |
 
 ---
 

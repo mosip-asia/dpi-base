@@ -14,11 +14,11 @@ This repository serves as the central knowledge base, infrastructure runbook, or
   - **Root Organization**: `dpi.ait.ac.th` (Org ID: `350922776586`) under Cloud Identity Free.
   - **Root Management Folder**: **`dpi-base`** directly mirrors this repository structure 1:1, consolidating management billing and admin IAM.
   - **Management Projects inside `dpi-base`**:
-    1. **Foundation (`dpi-mgmt/`)**: Root IAM governance, remote state (`gs://dpi-mgmt-tfstate`), and Secret Manager prerequisite keys (Google OAuth credentials, API tokens).
+    1. **Foundation (`dpi-mgmt/`)**: Root IAM governance, remote state (`gs://dpi-mgmt-tfstate`), and Secret Manager prerequisite keys for `dpi-base` only.
     2. **Network Fabric (`dpi-vpn/`)**: 24/7 NetBird Mesh VPN tier.
     3. **Control Plane (`dpi-kube-ops/`)**: On-demand Rancher and central observability tier.
-  - **Workload Infrastructure (`dpi-workloads/`)**: Separate folder/projects for research platforms, MOSIP deployments, digital licensing demonstrators (DLMS), and sandboxes.
-- **GCS Remote State Backend**: Terraform modules target `backend "gcs"` with bucket `gs://dpi-mgmt-tfstate` and prefix `foundation`.
+  - **Sovereign Domain Pattern for Workloads**: `dpi-mgmt` is strictly scoped to `dpi-base`. Workload initiatives (MOSIP, DLMS, research testbeds) MUST NEVER store state or secrets in `dpi-mgmt`. Each domain maintains its own GCP folder, a dedicated `<domain>-mgmt` anchor project, and an isolated state bucket (`gs://<domain>-tfstate`).
+- **GCS Remote State Backend**: `dpi-base` Terraform modules target `backend "gcs"` with bucket `gs://dpi-mgmt-tfstate` and prefix `foundation`.
 - **Authoritative DNS Invariant**: Public apex domain `dpi.ait.ac.th` is delegated by AIT to Cloud DNS Shard A (`ns-cloud-a1`–`a4`) and anchored in project `ait-brainlab-mgmt`. DNS records point to static IPs across the decoupled projects. Changes follow a strict 3-tier governance policy (Tier 1 GitOps PRs for apex/core; Tier 2 Kubernetes external-dns; Tier 3 delegated subdomains).
 
 ### 2. Identity & Access Governance
