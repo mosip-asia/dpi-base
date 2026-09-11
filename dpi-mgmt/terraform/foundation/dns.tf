@@ -1,5 +1,9 @@
 # ==========================================================
-# 🌐 Authoritative Cloud DNS: dpi.ait.ac.th
+# 🌐 Authoritative Cloud DNS Subzone: base.dpi.ait.ac.th
+# ==========================================================
+# This managed zone is 100% owned inside project dpi-mgmt under
+# Organization 350922776586. It is delegated from ait-brainlab-mgmt
+# via a single NS record, providing full local DNS sovereignty.
 # ==========================================================
 
 # Required GCP APIs for Cloud DNS
@@ -9,11 +13,11 @@ resource "google_project_service" "dns_api" {
   disable_on_destroy = false
 }
 
-# Authoritative Zone: dpi.ait.ac.th
-resource "google_dns_managed_zone" "dpi_th_zone" {
-  name        = "dpi-th"
+# Subzone: base.dpi.ait.ac.th
+resource "google_dns_managed_zone" "dpi_base_zone" {
+  name        = "dpi-base"
   dns_name    = var.domain_name
-  description = "DPI Center Public Authoritative Domain (dpi.ait.ac.th)"
+  description = "DPI Center Base Infrastructure Managed Zone (base.dpi.ait.ac.th)"
   visibility  = "public"
 
   dnssec_config {
@@ -27,30 +31,3 @@ resource "google_dns_managed_zone" "dpi_th_zone" {
   depends_on = [google_project_service.dns_api]
 }
 
-# Inbound Mail Routing (MX Records for Email Forwarding)
-resource "google_dns_record_set" "dpi_mx" {
-  name         = var.domain_name
-  managed_zone = google_dns_managed_zone.dpi_th_zone.name
-  type         = "MX"
-  ttl          = 3600
-  rrdatas = [
-    "10 mx1.improvmx.com.",
-    "20 mx2.improvmx.com."
-  ]
-}
-
-# TXT Records: SPF and Domain Ownership Verification
-locals {
-  txt_records = compact([
-    "\"v=spf1 include:spf.improvmx.com ~all\"",
-    var.google_site_verification != "" ? "\"${var.google_site_verification}\"" : ""
-  ])
-}
-
-resource "google_dns_record_set" "dpi_txt" {
-  name         = var.domain_name
-  managed_zone = google_dns_managed_zone.dpi_th_zone.name
-  type         = "TXT"
-  ttl          = 300
-  rrdatas      = local.txt_records
-}

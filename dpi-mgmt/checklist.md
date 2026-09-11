@@ -65,18 +65,19 @@ flowchart TD
 | Task ID | Task Description | Target Identity / Resource | Status | Notes / Output |
 | :--- | :--- | :--- | :---: | :--- |
 | `1.1` | Create management GCP project (`dpi-mgmt`) | `dpi-mgmt` (`189731855526`) | 🟢 | Linked to billing account `0199A6-1E141B-DC72A5` |
-| `1.2` | Deploy Cloud DNS zone for `dpi.ait.ac.th` | Cloud DNS (`dpi-th`) | 🔴 | Authoritative public DNS apex |
-| `1.3` | Deploy CI/CD Service Account (`dpi-mgmt-terraform`) | GCP IAM | 🔴 | Dedicated automation service account |
-| `1.4` | Enable core GCP APIs | Compute, DNS, IAM, Secret Manager | 🔴 | Automated via Terraform / gcloud |
-| `1.5` | Set up Terraform remote state bucket (`gs://dpi-mgmt-tfstate`)| Cloud Storage | 🔴 | Protected with versioning |
-
+| `1.2` | Root GCP Folder (`dpi-base`) | GCP Resource Manager | 🟡 | Mirrors repo 1:1; consolidates billing & IAM inheritance |
+| `1.3` | Enable core GCP APIs | Compute, DNS, IAM, Secret Manager | 🟢 | Enabled in `dpi-mgmt` |
+| `1.4` | Set up Terraform remote state bucket (`gs://dpi-mgmt-tfstate`)| Cloud Storage | 🟢 | `asia-southeast1`, versioning ON, uniform access ON |
+| `1.5` | Authoritative DNS Audit & Backup | `ait-brainlab-mgmt` | 🟢 | Exported full zone to `dpi-mgmt/dns-backups/` |
+| `1.6` | Deploy CI/CD Service Account & Secret Manager | GCP IAM & Secret Manager | 🟡 | Ready to apply in `dpi-mgmt` |
 
 ### Phase 2: DNS Routing & Inbound Mail
 | Task ID | Task Description | Target Identity / Resource | Status | Notes / Output |
 | :--- | :--- | :--- | :---: | :--- |
-| `2.1` | Verify nameserver delegation from authoritative DNS | `dpi.ait.ac.th` | 🔴 | Check if matches `ns-cloud-*.googledomains.com` |
-| `2.2` | Deploy MX records for email forwarding | ImprovMX / Cloudflare | 🔴 | Forwards `@dpi.ait.ac.th` to operating admins |
-| `2.3` | Deploy SPF TXT records | Cloud DNS | 🔴 | `v=spf1 include:... ~all` |
+| `2.1` | Validate nameserver delegation from authoritative DNS | `dpi.ait.ac.th` | 🟢 | Verified live on Shard A (`ns-cloud-a*.googledomains.com`) |
+| `2.2` | Deploy MX records for email forwarding | ImprovMX | 🟢 | Verified live: `mx1.improvmx.com`, `mx2.improvmx.com` |
+| `2.3` | Deploy SPF TXT records | Cloud DNS | 🟢 | Verified live: `v=spf1 include:spf.improvmx.com ~all` |
+| `2.4` | Subdomain Routing (NetBird, Rancher, Ingress) | Cross-Project Routing | 🟡 | Target static IPs in `dpi-vpn` and `dpi-kube-ops` |
 
 ### Phase 3: Single Sign-On (Google OAuth2 / OIDC)
 | Task ID | Task Description | Target Identity / Resource | Status | Notes / Output |

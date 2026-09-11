@@ -6,15 +6,31 @@ Welcome to the **DPI Center (Digital Public Infrastructure Center)** cloud engin
 
 ## 🏛️ 1. Google Cloud Organization & Resource Hierarchy
 
+```text
+Organization: dpi.ait.ac.th (350922776586)
+│
+├── 📁 Folder: dpi-base (Mirroring repository structure 1:1)
+│   ├── 📦 Project: dpi-mgmt (189731855526) — Remote State (gs://dpi-mgmt-tfstate), Secrets, IAM
+│   ├── 📦 Project: dpi-vpn — 24/7 Mesh VPN Tier (NetBird, WireGuard overlay, static IP)
+│   └── 📦 Project: dpi-kube-ops — On-Demand Control Plane (Rancher, Observability)
+│
+└── 📁 Folder: dpi-workloads (Transient / Research Workloads)
+    ├── 📦 Project: dpi-workload-mosip — MOSIP Demonstrator Testbed
+    ├── 📦 Project: dpi-workload-dlms — Driver Licensing Demonstrator
+    └── 📦 Project: dpi-workload-sandbox — Developer & Student Sandboxes
+```
+
 | Resource | Value / Identifier | Notes |
 | :--- | :--- | :--- |
 | **GCP Organization** | **`dpi.ait.ac.th`** | Governed under **Cloud Identity Free** ($0/month base). |
 | **Organization ID** | **`350922776586`** | Root node for all center projects and folders. |
 | **Directory Customer ID** | **`C0164ixfv`** | Google Workspace / Cloud Identity tenant identifier. |
 | **Active Billing Account** | **`0199A6-1E141B-DC72A5`** | `My Billing Account` (prepaid credit balance + card). |
-| **Core Management Project**| **`dpi-mgmt`** (`189731855526`)| Permanent anchor for Cloud DNS, remote state (`gs://dpi-mgmt-tfstate`), and Secret Manager. |
+| **Root Management Folder** | **`dpi-base`** | Matches Git repository name 1:1; inherits admin IAM & consolidates billing. |
+| **Core Management Project**| **`dpi-mgmt`** (`189731855526`)| Permanent anchor for remote state (`gs://dpi-mgmt-tfstate`), CI/CD SA, and Secret Manager. |
 | **Network Fabric Project** | **`dpi-vpn`** *(Phase 2)* | 24/7 Mesh VPN Tier (NetBird `e2-small`, static IP, WireGuard overlay). |
 | **Control Plane Project**  | **`dpi-kube-ops`** *(Phase 3)*| On-demand K8s management (Rancher `e2-standard-4`, VictoriaMetrics, Loki, Grafana). |
+| **Authoritative DNS Anchor**| **`ait-brainlab-mgmt`** | Current host of `dpi-center` zone (Shard A `ns-cloud-a1`-`a4`) delegated from `ait.ac.th`. |
 
 ---
 
@@ -100,6 +116,31 @@ To prevent accidental outages and credential leaks, we enforce a strict **"Break
 * **Metrics**: **VictoriaMetrics Single** (uses 1/5th to 1/7th the RAM of standard Prometheus, with native remote-write).
 * **Logs**: **Grafana Loki** (stores compressed chunked logs on disk/GCS without indexing full text).
 * **Edge K3s Footprint**: Downstream clusters only run **`vmagent`** and **`promtail`**, keeping telemetry overhead **<100MB RAM total per cluster**.
+
+### Decision 5: GCP Resource Hierarchy (`dpi-base` Folder & Project Decoupling)
+* **Context**: Need granular invoice tracking, cost control, and a clean cognitive mapping between version control and cloud resources.
+* **Decision**: We introduce a root GCP Folder named **`dpi-base`** under Organization `350922776586`, mirroring the Git repository structure 1:1:
+  - `dpi-base/` (Repo) -> `dpi-base` (GCP Folder)
+  - `dpi-mgmt/` -> Project `dpi-mgmt` (Remote state, Secret Manager, root IAM)
+  - `dpi-vpn/` -> Project `dpi-vpn` (24/7 NetBird network fabric)
+  - `dpi-kube-ops/` -> Project `dpi-kube-ops` (On-demand Rancher control plane)
+* **Billing & Governance Benefits**:
+  1. **Folder-Level Invoice Roll-ups**: Monthly cloud invoices cleanly separate fixed management overhead (`dpi-base` folder) from transient grant/research spending (`dpi-workloads` folder).
+  2. **Project-Level Cost Caps**: Individual budget alerts configured per project (e.g. verify `dpi-vpn` remains flat at ~$14/mo, track Rancher instance schedule savings).
+  3. **Inherited IAM**: Operating admins (`akraradet@ait.asia`, `nuttasit@ait.asia`) hold roles at the `dpi-base` folder level, automatically cascading down to all management tiers while strictly isolating workload developers.
+
+### Decision 6: DNS Apex Anchoring in `ait-brainlab-mgmt` & 3-Tier DNS Governance
+* **Context**:
+  - The apex domain `dpi.ait.ac.th` is delegated from AIT's parent zone (`ait.ac.th`) to Google Cloud DNS Shard A (`ns-cloud-a1` to `ns-cloud-a4`).
+  - Google Cloud DNS generates nameserver shards dynamically and prohibits transferring or reassigning specific nameservers across GCP projects. Recreating the zone in `dpi-mgmt` would assign a different shard (B, C, D, or E), requiring manual intervention from AIT IT to re-delegate.
+  - To prevent service disruption to existing active records (MX mail forwarding, `obs.dpi.ait.ac.th`, `sandbox-a.dpi.ait.ac.th`) and eliminate the need to contact AIT IT, DNS anchoring must be deliberate.
+* **Decision**:
+  - The authoritative apex Cloud DNS zone remains anchored in **`ait-brainlab-mgmt`** (Zone: `dpi-center`).
+  - DNS records are project-agnostic pointers: records in `ait-brainlab-mgmt` point to static external IPs in `dpi-vpn` (NetBird), `dpi-kube-ops` (Rancher), and workload ingresses.
+* **Governance Standard (The 3-Tier DNS Policy)**:
+  - **Tier 1 (Apex & Management)**: `dpi.ait.ac.th`, `netbird`, `rancher`, `MX`, `SPF`. Strictly locked down. Modified **ONLY via GitOps Pull Requests** in this repository. Zero direct GCP console editing.
+  - **Tier 2 (Workloads & Demos)**: `*.demo.dpi.ait.ac.th`. Automated via Kubernetes **`external-dns`** controllers bound strictly to ingress resources. Automatically provisions and cleans up records.
+  - **Tier 3 (Developer Sandboxes)**: High-churn development environments receive dedicated subdomain delegations (e.g. `*.sandbox-a.dpi.ait.ac.th` delegated to AWS Route 53 or dedicated test projects) granting team autonomy with zero blast radius to the root apex.
 
 ---
 

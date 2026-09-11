@@ -1,11 +1,11 @@
 output "domain_name" {
-  description = "Apex domain name for DPI Center"
-  value       = google_dns_managed_zone.dpi_th_zone.dns_name
+  description = "Subzone domain name for DPI Center Base Infrastructure"
+  value       = google_dns_managed_zone.dpi_base_zone.dns_name
 }
 
 output "name_servers" {
-  description = "Authoritative Cloud DNS nameservers assigned to dpi.ait.ac.th"
-  value       = google_dns_managed_zone.dpi_th_zone.name_servers
+  description = "Authoritative Cloud DNS nameservers assigned to base.dpi.ait.ac.th (delegate these in ait-brainlab-mgmt)"
+  value       = google_dns_managed_zone.dpi_base_zone.name_servers
 }
 
 output "terraform_service_account_email" {

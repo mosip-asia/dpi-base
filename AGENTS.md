@@ -10,13 +10,16 @@ This repository serves as the central knowledge base, infrastructure runbook, or
 ### 1. Core Management Plane (`dpi-mgmt/`) — `dpi-mgmt`
 - **Purpose**: Permanent, decoupled, low-cost (~$0.20/mo base), 100% Stateless GitOps management control plane.
 - **Organization Boundary**: Governed by the Google Cloud Organization for **`dpi.ait.ac.th`** (Org ID: `350922776586`) using **Cloud Identity Free** ($0/month base, up to 50 managed identities with free quota scaling).
-- **Decoupled Architecture**:
-  1. **Foundation (`dpi-mgmt/terraform/foundation/`)**: Root IAM governance, authoritative Cloud DNS zone (`dpi.ait.ac.th`), and Secret Manager prerequisite keys (Google OAuth credentials, API tokens).
-  2. **Network Fabric (`dpi-vpn/`)**: 24/7 NetBird Mesh VPN tier.
-  3. **Control Plane (`dpi-kube-ops/`)**: On-demand Rancher and central observability tier.
-  4. **Workload Infrastructure (`workloads/`)**: Research platforms, MOSIP deployments, digital licensing demonstrators (DLMS), and compute nodes.
+- **Decoupled Architecture & GCP Resource Hierarchy**:
+  - **Root Organization**: `dpi.ait.ac.th` (Org ID: `350922776586`) under Cloud Identity Free.
+  - **Root Management Folder**: **`dpi-base`** directly mirrors this repository structure 1:1, consolidating management billing and admin IAM.
+  - **Management Projects inside `dpi-base`**:
+    1. **Foundation (`dpi-mgmt/`)**: Root IAM governance, remote state (`gs://dpi-mgmt-tfstate`), and Secret Manager prerequisite keys (Google OAuth credentials, API tokens).
+    2. **Network Fabric (`dpi-vpn/`)**: 24/7 NetBird Mesh VPN tier.
+    3. **Control Plane (`dpi-kube-ops/`)**: On-demand Rancher and central observability tier.
+  - **Workload Infrastructure (`dpi-workloads/`)**: Separate folder/projects for research platforms, MOSIP deployments, digital licensing demonstrators (DLMS), and sandboxes.
 - **GCS Remote State Backend**: Terraform modules target `backend "gcs"` with bucket `gs://dpi-mgmt-tfstate` and prefix `foundation`.
-- **Authoritative DNS**: All public records for `dpi.ait.ac.th` are resolved through Google Cloud DNS.
+- **Authoritative DNS Invariant**: Public apex domain `dpi.ait.ac.th` is delegated by AIT to Cloud DNS Shard A (`ns-cloud-a1`–`a4`) and anchored in project `ait-brainlab-mgmt`. DNS records point to static IPs across the decoupled projects. Changes follow a strict 3-tier governance policy (Tier 1 GitOps PRs for apex/core; Tier 2 Kubernetes external-dns; Tier 3 delegated subdomains).
 
 ### 2. Identity & Access Governance
 - **AuthN (Google OAuth2 / OIDC)**: Handles identity verification, SSO, and 2FA across DPI web portals, APIs, and administrative dashboards.
