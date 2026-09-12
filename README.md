@@ -8,7 +8,8 @@ Welcome to the **DPI Center (Digital Public Infrastructure Center)** central kno
 
 This repository serves as the single source of truth for:
 * **GCP Organization Governance**: Google Cloud Identity Free & Organization administration for **`dpi.ait.ac.th`** (Org ID: `350922776586`).
-* **Team Onboarding & Decisions**: See complete Architecture Decision Records in [`docs/decisions_and_onboarding.md`](docs/decisions_and_onboarding.md).
+* **Grant Billing & Resource Governance**: Multi-billing account architecture, grant accounting, and payment SOP in [`docs/governance/gcp_billing_and_management.md`](docs/governance/gcp_billing_and_management.md).
+* **Team Onboarding & Decisions**: Complete Architecture Decision Records in [`docs/decisions_and_onboarding.md`](docs/decisions_and_onboarding.md).
 * **Cloud Management Plane (`dpi-mgmt/`)**: Authoritative Cloud DNS, root IAM governance, automated Secret Manager key storage, and Single Sign-On (SSO) credentials.
 * **Domain Landscape**: Public DNS records, routing, and email routing for `dpi.ait.ac.th` and managed subdomains.
 * **Service Admin & Workload Runbooks**: Infrastructure definitions and deployment guides for DPI research platforms, identity infrastructure, and digital public goods (including **MOSIP** and **DLMS**).
@@ -112,6 +113,8 @@ dpi-base/
 │
 ├── docs/                          # 📋 Operational SOPs, ADRs & Infrastructure Runbooks
 │   ├── decisions_and_onboarding.md # Complete team onboarding guide & architecture decisions
+│   ├── governance/                # 💳 GCP Multi-Billing, Grant Accounting & Resource SOP
+│   │   └── gcp_billing_and_management.md
 │   └── infra/network/             # DNS topology and network runbooks
 │
 ├── dpi-mgmt/                      # 🛡️ GCP Project: `dpi-mgmt` (Cloud DNS & Governance)

@@ -25,7 +25,8 @@ Organization: dpi.ait.ac.th (350922776586)
 | **GCP Organization** | **`dpi.ait.ac.th`** | Governed under **Cloud Identity Free** ($0/month base). |
 | **Organization ID** | **`350922776586`** | Root node for all center projects and folders. |
 | **Directory Customer ID** | **`C0164ixfv`** | Google Workspace / Cloud Identity tenant identifier. |
-| **Active Billing Account** | **`0199A6-1E141B-DC72A5`** | `My Billing Account` (prepaid credit balance + card). |
+| **Core Billing Account** | **`0199A6-1E141B-DC72A5`** | `DPI Center - Base Platform` (linked to `dpi-base`). Dedicated accounts created per grant. |
+| **Grant Billing Governance**| [Billing SOP](governance/gcp_billing_and_management.md) | Multi-billing architecture, grant accounting, and payment receipts SOP. |
 | **Root Management Folder** | **`dpi-base`** | Matches Git repository name 1:1; inherits admin IAM & consolidates billing. |
 | **Core Management Project**| **`dpi-mgmt`** (`189731855526`)| Permanent anchor for remote state (`gs://dpi-mgmt-tfstate`), CI/CD SA, and Secret Manager. |
 | **Network Fabric Project** | **`dpi-vpn`** *(Phase 2)* | 24/7 Mesh VPN Tier (NetBird `e2-small`, static IP, WireGuard overlay). |
