@@ -158,6 +158,20 @@ To prevent accidental outages and credential leaks, we enforce a strict **"Break
   2. **Grant & Donor Cost Accounting**: Monthly cloud billing invoices are cleanly grouped by folder for effortless audit and donor grant reporting.
   3. **Multi-Repo Decoupling**: Application repositories manage their own infrastructure independently without needing IAM access to `dpi-base`.
 
+### Decision 8: Multi-Billing Account Architecture & Model A (Prepaid Top-Up) Grant Financing
+* **Context**:
+  - In university research labs, academic staff hesitate to attach personal credit cards due to fear of runaway expenses, personal debt liability, and delayed institutional reimbursements.
+  - Institutional donors (World Bank, Gates Foundation, MOSIP) and university grant auditors require receipts and invoices matching approved grant budget sheets 1-to-1 without manual line-item reconciliation.
+* **Decision**:
+  1. **Multi-Billing Account Model**: Each research grant / team maintains its own independent Google Cloud Billing Account (e.g. `DPI Center - Base Platform`, `DPI Center - PAD Team Grant`, `DPI Center - AI Team Grant`, `DPI Center - Sandbox & Training`).
+  2. **Adoption of Model A (Prepaid Manual Top-Up)**:
+     - The designated Principal Investigator (PI) or Team Lead attaches their card **only** to their specific grant billing account.
+     - **Zero-Surprise Rule**: We strictly avoid automatic post-billing. Instead, spend is pre-funded using the **"Make a payment"** (Top-up) feature in GCP Console for the exact approved quarterly grant amount (e.g. $150.00).
+     - **Instant Tax Receipt**: Google Cloud immediately generates an official Tax Receipt showing `DPI Center - <Team> Grant` and `$XXX.XX Paid`.
+     - **Day 1 Reimbursement**: The PI submits this official PDF receipt to AIT Finance on the same day, securing reimbursement before their personal credit card statement closes.
+     - **Hard Cap Safety**: Automated GCP Budget Threshold Alerts at 50%, 80%, and 100% prevent runaway spend, completely eliminating personal financial liability.
+* **Operational SOP**: Complete procedures and financial audit checklists are maintained in [`docs/governance/gcp_billing_and_management.md`](governance/gcp_billing_and_management.md).
+
 ---
 
 ## 🛠️ 4. Developer Quickstart for Team Members
