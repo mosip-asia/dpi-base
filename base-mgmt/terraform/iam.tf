@@ -1,8 +1,8 @@
 # ==========================================================
-# 👥 IAM Governance & Automation Service Account
+# 👥 IAM Governance (Folder-Level Inheritance)
 # ==========================================================
 
-# Required GCP APIs for IAM
+# Required GCP APIs for Management Plane
 resource "google_project_service" "iam_apis" {
   for_each = toset([
     "iam.googleapis.com",
@@ -16,47 +16,49 @@ resource "google_project_service" "iam_apis" {
 }
 
 locals {
-  authorized_editors = [
-    "user:akraradet@ait.asia",
-    "user:nuttasit@ait.asia",
+  formatted_folder_id = var.folder_id != "" ? (
+    startswith(var.folder_id, "folders/") ? var.folder_id : "folders/${var.folder_id}"
+  ) : ""
+
+  # Ensure user: prefix for emails
+  formatted_folder_admins = [
+    for member in var.folder_admins :
+    startswith(member, "user:") || startswith(member, "group:") || startswith(member, "serviceAccount:") ? member : "user:${member}"
+  ]
+
+  formatted_folder_members = [
+    for member in var.folder_members :
+    startswith(member, "user:") || startswith(member, "group:") || startswith(member, "serviceAccount:") ? member : "user:${member}"
   ]
 }
 
-# Project Editors (Daily Technical Administrators)
-resource "google_project_iam_member" "editors" {
-  for_each = toset(local.authorized_editors)
+# ------------------------------------------------------------------------------
+# Folder Admins: Inherited folder administration & editor access across all child projects
+# ------------------------------------------------------------------------------
+resource "google_folder_iam_member" "folder_admins_editor" {
+  for_each = local.formatted_folder_id != "" ? toset(local.formatted_folder_admins) : []
 
-  project    = var.project_id
-  role       = "roles/editor"
-  member     = each.key
-  depends_on = [google_project_service.iam_apis]
+  folder = local.formatted_folder_id
+  role   = "roles/editor"
+  member = each.value
 }
 
-# Dedicated Service Account for Terraform CI/CD & Automation
-resource "google_service_account" "mgmt_terraform_sa" {
-  account_id   = "base-mgmt-terraform"
-  display_name = "DPI Base Management Terraform Service Account"
-  description  = "Service account used by Terraform and automation pipelines to manage infrastructure"
-  depends_on   = [google_project_service.iam_apis]
+resource "google_folder_iam_member" "folder_admins_folder_admin" {
+  for_each = local.formatted_folder_id != "" ? toset(local.formatted_folder_admins) : []
+
+  folder = local.formatted_folder_id
+  role   = "roles/resourcemanager.folderAdmin"
+  member = each.value
 }
 
-# Grant DNS Admin to Terraform Service Account
-resource "google_project_iam_member" "sa_dns_admin" {
-  project = var.project_id
-  role    = "roles/dns.admin"
-  member  = "serviceAccount:${google_service_account.mgmt_terraform_sa.email}"
+# ------------------------------------------------------------------------------
+# Folder Members: Inherited viewer access across all child projects
+# ------------------------------------------------------------------------------
+resource "google_folder_iam_member" "folder_members_viewer" {
+  for_each = local.formatted_folder_id != "" ? toset(local.formatted_folder_members) : []
+
+  folder = local.formatted_folder_id
+  role   = "roles/viewer"
+  member = each.value
 }
 
-# Grant Secret Manager Admin to Terraform Service Account
-resource "google_project_iam_member" "sa_secrets_admin" {
-  project = var.project_id
-  role    = "roles/secretmanager.admin"
-  member  = "serviceAccount:${google_service_account.mgmt_terraform_sa.email}"
-}
-
-# Grant Storage Object Admin for State & Backups
-resource "google_project_iam_member" "sa_storage_admin" {
-  project = var.project_id
-  role    = "roles/storage.objectAdmin"
-  member  = "serviceAccount:${google_service_account.mgmt_terraform_sa.email}"
-}
