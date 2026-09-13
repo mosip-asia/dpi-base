@@ -113,7 +113,8 @@ dpi-base/
 
 │
 ├── docs/                          # Standard Operating Procedures (Runbooks)
-│   └── sop.md                     # Master SOP: New Domain, New Project, Base Infra
+│   ├── sop-domain-mgmt.md         # Domain Landing Zone & Management Plane Runbook
+│   └── sop-workload.md            # Workload Project & Compute Lifecycle Runbook
 │
 ├── base-mgmt/                     # GCP Project: base-mgmt (Cloud DNS & Governance)
 │   ├── oauth_setup.md             # Google OAuth2 / OIDC console setup SOP
@@ -123,7 +124,7 @@ dpi-base/
 │   ├── terraform/                 # e2-small VM, static IP, firewall rules
 │   └── docker/                    # NetBird docker-compose & reverse proxy configs
 │
-└── dpi-kube-ops/                  # GCP Project: dpi-kube-ops (Rancher & Observability)
+└── base-kube-ops/                 # GCP Project: base-kube-ops (Rancher & Observability)
     ├── terraform/                 # e2-standard-4 VM, Instance Schedule, K3s startup
     └── helm/                      # Rancher Community, VictoriaMetrics & Grafana values
 ```
@@ -133,5 +134,7 @@ dpi-base/
 ## 🔗 Quick Navigation
 
 * 🚦 **Current Situation & Deployment Progress**: See [`STATUS.md`](STATUS.md).
-* 📖 **How to Add a New Domain, Project, or Infra**: Follow [`docs/sop.md`](docs/sop.md).
+* 🏛️ **How to Provision a New Domain Landing Zone**: Follow [`docs/sop-domain-mgmt.md`](docs/sop-domain-mgmt.md).
+* 💻 **How to Deploy a Workload Project**: Follow [`docs/sop-workload.md`](docs/sop-workload.md).
 * 🎯 **GitHub Milestones & Tracking**: [GitHub Epic #1](https://github.com/mosip-asia/dpi-base/issues/1).
+
