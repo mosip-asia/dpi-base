@@ -2,9 +2,9 @@
 # ==============================================================================
 # 🚀 DPI Center — NetBird Stack VM Service Deployer
 # ==============================================================================
-# This script executes directly on the VM (/opt/dpi/deploy.sh).
+# This script executes directly on the VM (/opt/netbird/deploy.sh).
 # It pulls secrets from Secret Manager using the VM's service account,
-# renders /opt/dpi/.env and /opt/dpi/netbird/management.json, configures swap,
+# renders /opt/netbird/.env and /opt/netbird/management.json, configures swap,
 # and starts/updates the Docker Compose stack.
 # ==============================================================================
 set -euo pipefail
@@ -23,30 +23,36 @@ log_info() { echo -e "${GREEN}✔ [VM]${NC} $1"; }
 log_cmd()  { echo -e "${CYAN}▶ [VM RUN]${NC} ${DIM}$1${NC}"; }
 log_warn() { echo -e "${YELLOW}⚠ [VM WARN]${NC} $1"; }
 
-DPI_DIR="/opt/dpi"
+SERVICE_DIR="/opt/netbird"
 MGMT_PROJECT="base-mgmt"
 NETBIRD_FQDN="netbird.base.dpi.ait.ac.th"
 PROD_FQDN="netbird.dpi.ait.ac.th"
 ACME_EMAIL="admin@dpi.ait.ac.th"
 SINGLE_ACCOUNT_MODE_DOMAIN="dpi.ait.ac.th"
 
-mkdir -p "$DPI_DIR/netbird" "$DPI_DIR/traefik" "$DPI_DIR/scripts"
+# 0. Seamless migration from legacy /opt/dpi path if present
+if [ -d /opt/dpi ] && [ ! -d "$SERVICE_DIR" ]; then
+  log_info "Migrating legacy /opt/dpi to $SERVICE_DIR..."
+  sudo mv /opt/dpi "$SERVICE_DIR"
+fi
 
-# 1. Move uploaded files from /tmp to /opt/dpi
+mkdir -p "$SERVICE_DIR/traefik" "$SERVICE_DIR/data" "$SERVICE_DIR/scripts"
+
+# 1. Move uploaded files from /tmp to /opt/netbird
 echo -e "\n${BOLD}--- [1/5] Syncing Application Manifests ---${NC}"
 if [ -f /tmp/docker-compose.yml ]; then
-  log_cmd "mv /tmp/docker-compose.yml $DPI_DIR/docker-compose.yml"
-  sudo mv /tmp/docker-compose.yml "$DPI_DIR/docker-compose.yml"
+  log_cmd "mv /tmp/docker-compose.yml $SERVICE_DIR/docker-compose.yml"
+  sudo mv /tmp/docker-compose.yml "$SERVICE_DIR/docker-compose.yml"
 fi
 
 if [ -f /tmp/management.json.template ]; then
-  log_cmd "mv /tmp/management.json.template $DPI_DIR/netbird/management.json.template"
-  sudo mv /tmp/management.json.template "$DPI_DIR/netbird/management.json.template"
+  log_cmd "mv /tmp/management.json.template $SERVICE_DIR/management.json.template"
+  sudo mv /tmp/management.json.template "$SERVICE_DIR/management.json.template"
 fi
 
 if [ -f /tmp/.env.template ]; then
-  log_cmd "mv /tmp/.env.template $DPI_DIR/.env.template"
-  sudo mv /tmp/.env.template "$DPI_DIR/.env.template"
+  log_cmd "mv /tmp/.env.template $SERVICE_DIR/.env.template"
+  sudo mv /tmp/.env.template "$SERVICE_DIR/.env.template"
 fi
 
 # 2. Fetch Secrets from Secret Manager via VM Attached Service Account
@@ -68,7 +74,7 @@ else
 fi
 
 # Relay Secret (keep existing or generate a secure 64-char token)
-EXISTING_RELAY_SECRET=$(grep '^NETBIRD_RELAY_SECRET=' "$DPI_DIR/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '"' || true)
+EXISTING_RELAY_SECRET=$(grep '^NETBIRD_RELAY_SECRET=' "$SERVICE_DIR/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '"' || true)
 if [[ -n "$EXISTING_RELAY_SECRET" ]]; then
   RELAY_SECRET="$EXISTING_RELAY_SECRET"
   log_info "Preserving existing NetBird Relay Secret."
@@ -79,8 +85,8 @@ fi
 
 # 3. Render Configuration Files (.env and management.json)
 echo -e "\n${BOLD}--- [3/5] Rendering Configuration Files (.env & management.json) ---${NC}"
-if [ -f "$DPI_DIR/.env.template" ]; then
-  log_cmd "Rendering $DPI_DIR/.env from template on VM"
+if [ -f "$SERVICE_DIR/.env.template" ]; then
+  log_cmd "Rendering $SERVICE_DIR/.env from template on VM"
   sed -e "s|\$NETBIRD_FQDN|$NETBIRD_FQDN|g" \
       -e "s|\$PROD_FQDN|$PROD_FQDN|g" \
       -e "s|\$ACME_EMAIL|$ACME_EMAIL|g" \
@@ -88,10 +94,10 @@ if [ -f "$DPI_DIR/.env.template" ]; then
       -e "s|\$GOOGLE_OAUTH_CLIENT_SECRET|$OAUTH_CLIENT_SECRET|g" \
       -e "s|\$NETBIRD_RELAY_SECRET|$RELAY_SECRET|g" \
       -e "s|\$SINGLE_ACCOUNT_MODE_DOMAIN|$SINGLE_ACCOUNT_MODE_DOMAIN|g" \
-      "$DPI_DIR/.env.template" | sudo tee "$DPI_DIR/.env" > /dev/null
+      "$SERVICE_DIR/.env.template" | sudo tee "$SERVICE_DIR/.env" > /dev/null
 else
-  log_cmd "Writing $DPI_DIR/.env directly on VM"
-  cat << ENV_EOF | sudo tee "$DPI_DIR/.env" > /dev/null
+  log_cmd "Writing $SERVICE_DIR/.env directly on VM"
+  cat << ENV_EOF | sudo tee "$SERVICE_DIR/.env" > /dev/null
 NETBIRD_FQDN="$NETBIRD_FQDN"
 PROD_FQDN="$PROD_FQDN"
 ACME_EMAIL="$ACME_EMAIL"
@@ -102,20 +108,23 @@ SINGLE_ACCOUNT_MODE_DOMAIN="$SINGLE_ACCOUNT_MODE_DOMAIN"
 ENV_EOF
 fi
 
-if [ -f "$DPI_DIR/netbird/management.json.template" ]; then
-  log_cmd "Rendering $DPI_DIR/netbird/management.json from template"
+if [ -f "$SERVICE_DIR/management.json.template" ]; then
+  log_cmd "Rendering $SERVICE_DIR/management.json from template"
   sed -e "s|\$GOOGLE_OAUTH_CLIENT_ID|$OAUTH_CLIENT_ID|g" \
       -e "s|\$GOOGLE_OAUTH_CLIENT_SECRET|$OAUTH_CLIENT_SECRET|g" \
       -e "s|\$NETBIRD_RELAY_SECRET|$RELAY_SECRET|g" \
       -e "s|\$SINGLE_ACCOUNT_MODE_DOMAIN|$SINGLE_ACCOUNT_MODE_DOMAIN|g" \
       -e "s|\$NETBIRD_FQDN|$NETBIRD_FQDN|g" \
-      "$DPI_DIR/netbird/management.json.template" | sudo tee "$DPI_DIR/netbird/management.json" > /dev/null
+      "$SERVICE_DIR/management.json.template" | sudo tee "$SERVICE_DIR/management.json" > /dev/null
 fi
 
-log_cmd "chmod 600 $DPI_DIR/.env $DPI_DIR/netbird/management.json"
-sudo chmod 600 "$DPI_DIR/.env" "$DPI_DIR/netbird/management.json" 2>/dev/null || true
+log_cmd "chmod 600 $SERVICE_DIR/.env $SERVICE_DIR/management.json"
+sudo chmod 600 "$SERVICE_DIR/.env" "$SERVICE_DIR/management.json" 2>/dev/null || true
+if [ -f "$SERVICE_DIR/traefik/acme.json" ]; then
+  sudo chmod 600 "$SERVICE_DIR/traefik/acme.json" 2>/dev/null || true
+fi
 log_cmd "chown root:root on all stack configs"
-sudo chown root:root "$DPI_DIR/docker-compose.yml" "$DPI_DIR/.env" "$DPI_DIR/netbird/management.json" "$DPI_DIR/deploy.sh" 2>/dev/null || true
+sudo chown root:root "$SERVICE_DIR/docker-compose.yml" "$SERVICE_DIR/.env" "$SERVICE_DIR/management.json" "$SERVICE_DIR/deploy.sh" 2>/dev/null || true
 log_info "Configuration rendered and permissions locked down (0600 root:root)."
 
 # 4. Swapfile Memory Protection (2GB swap for e2-micro 1GB RAM)
@@ -141,7 +150,7 @@ fi
 
 # 5. Container Lifecycle (Pull & Up)
 echo -e "\n${BOLD}--- [5/5] Container Lifecycle & Verification ---${NC}"
-cd "$DPI_DIR"
+cd "$SERVICE_DIR"
 
 log_info "Pulling latest container images..."
 log_cmd "sudo docker compose pull"

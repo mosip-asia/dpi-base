@@ -18,17 +18,17 @@ swap:
 
 
 write_files:
-  - path: /opt/dpi/traefik/acme.json
+  - path: /opt/netbird/traefik/acme.json
     permissions: '0600'
     content: ''
 
-  - path: /opt/dpi/scripts/backup_to_gcs.sh
+  - path: /opt/netbird/scripts/backup_to_gcs.sh
     permissions: '0755'
     content: |
       #!/usr/bin/env bash
       set -euo pipefail
-      if [ -f /opt/dpi/netbird/data/store.db ]; then
-          sqlite3 /opt/dpi/netbird/data/store.db ".backup /tmp/netbird_store.db"
+      if [ -f /opt/netbird/data/store.db ]; then
+          sqlite3 /opt/netbird/data/store.db ".backup /tmp/netbird_store.db"
           gcloud storage cp /tmp/netbird_store.db "gs://${state_bucket}/backups/netbird/store.db" --quiet
           rm -f /tmp/netbird_store.db
       fi
@@ -45,10 +45,10 @@ write_files:
       [Service]
       Type=oneshot
       RemainAfterExit=yes
-      WorkingDirectory=/opt/dpi
+      WorkingDirectory=/opt/netbird
       ExecStart=/usr/bin/docker compose up -d --remove-orphans
       ExecStop=/usr/bin/docker compose down
-      ExecStopPost=/opt/dpi/scripts/backup_to_gcs.sh
+      ExecStopPost=/opt/netbird/scripts/backup_to_gcs.sh
       TimeoutStartSec=300
 
       [Install]
@@ -63,14 +63,14 @@ runcmd:
   - echo "127.0.0.1 ${netbird_fqdn}" >> /etc/hosts
 
   # 3. Create required directory tree
-  - mkdir -p /opt/dpi/netbird/data /opt/dpi/traefik /opt/dpi/scripts
-  - chmod 600 /opt/dpi/traefik/acme.json
+  - mkdir -p /opt/netbird/data /opt/netbird/traefik /opt/netbird/scripts
+  - chmod 600 /opt/netbird/traefik/acme.json
 
   # 4. Restore NetBird SQLite Database from GCS if exists
   - |
-    if gcloud storage cp "gs://${state_bucket}/backups/netbird/store.db" /opt/dpi/netbird/data/store.db 2>/dev/null; then
+    if gcloud storage cp "gs://${state_bucket}/backups/netbird/store.db" /opt/netbird/data/store.db 2>/dev/null; then
         echo "Restored NetBird store.db from GCS"
-        chmod 600 /opt/dpi/netbird/data/store.db
+        chmod 600 /opt/netbird/data/store.db
     else
         echo "No previous NetBird database found in GCS. Starting clean."
     fi
@@ -80,4 +80,4 @@ runcmd:
   - systemctl enable dpi-vpn.service
 
   # 6. Install 6-hourly backup cron
-  - (crontab -l 2>/dev/null | grep -v 'backup_to_gcs.sh' || true; echo "0 */6 * * * /opt/dpi/scripts/backup_to_gcs.sh >/dev/null 2>&1") | crontab -
+  - (crontab -l 2>/dev/null | grep -v 'backup_to_gcs.sh' || true; echo "0 */6 * * * /opt/netbird/scripts/backup_to_gcs.sh >/dev/null 2>&1") | crontab -

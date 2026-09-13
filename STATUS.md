@@ -66,8 +66,8 @@
 | `2.1` | Create Project `base-vpn` & Link Billing | `base-vpn` (`945976338321`) | 🟢 Verified | Created via `prj-base-vpn.tf`, billing linked from Secret Manager, lien active |
 | `2.2` | Terraform Infrastructure & Cloud-Init | `base-vpn/terraform/` | 🟢 Verified | VM (`e2-micro`), regional static IP (`35.240.138.109`), zero-trust firewalls, 2GB swap |
 | `2.3` | Decoupled DNS Record | `base-mgmt` Cloud DNS zone | 🟢 Verified | `netbird.base.dpi.ait.ac.th` -> `35.240.138.109` active & resolving worldwide |
-| `2.4` | NetBird Docker Stack & Traefik v3 Proxy | `base-vpn/docker/` | 🟢 Verified | Traefik v3, NetBird stack, and Dependabot major-only filter |
-| `2.5` | Zero-Downtime Stack Deployer | `base-vpn/remote-deploy.sh` | 🟡 Ready to Deploy | Push deploy over IAP tunnel, auto-renders `.env` & `management.json`, runs `docker/deploy.sh` |
+| `2.4` | NetBird Docker Stack & Traefik v3 Proxy | `base-vpn/netbird/` | 🟢 Verified | Traefik v3, NetBird stack, and Dependabot major-only filter |
+| `2.5` | Zero-Downtime Stack Deployer | `base-vpn/remote-deploy.sh` | 🟡 Ready to Deploy | Push deploy over IAP tunnel, renders `.env` & `management.json` in `/opt/netbird` |
 | `2.6` | NetBird OAuth SSO & Admin Approval | Google OAuth2 Web Client | 🟢 Credentials Seeded | Client ID & Secret seeded into Secret Manager in `base-mgmt` |
 | `2.7` | Canonical Production CNAME Pointer | Parent Zone `dpi-center` (`ait-brainlab-mgmt`) | 🔴 Planned (TODO) | Point `netbird.dpi.ait.ac.th` CNAME $\rightarrow$ `netbird.base.dpi.ait.ac.th` (TTL 60s) |
 

@@ -3,7 +3,7 @@
 # 🚀 DPI Center — NetBird Mesh VPN Local Orchestrator & Deployer
 # ==============================================================================
 # Stages stack configurations and uploads them to the VM via Google IAP tunnel,
-# then executes the VM-side deployer (/opt/dpi/deploy.sh) which retrieves
+# then executes the VM-side deployer (/opt/netbird/deploy.sh) which retrieves
 # secrets directly from GCP Secret Manager via its VM service account.
 #
 # Usage:
@@ -39,33 +39,35 @@ log_info() {
 VPN_PROJECT="base-vpn"
 VM_NAME="base-vpn-vm"
 ZONE="asia-southeast1-b"
-REMOTE_DIR="/opt/dpi"
+REMOTE_DIR="/opt/netbird"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 log_step "📦 [1/2] Uploading Stack Manifests to VM via IAP..."
 
 echo -e "Target VM:   ${BOLD}$VM_NAME${NC} (Project: ${CYAN}$VPN_PROJECT${NC}, Zone: ${CYAN}$ZONE${NC})"
-echo -e "Source Dir:  ${BOLD}$SCRIPT_DIR/docker${NC}"
+echo -e "Source Dir:  ${BOLD}$SCRIPT_DIR/netbird${NC}"
+echo -e "Remote Dir:  ${BOLD}$REMOTE_DIR${NC}"
 echo ""
 
 # Upload docker-compose.yml, management.json.template, .env.template, and deploy.sh
-SCP_CMD="gcloud compute scp --project=$VPN_PROJECT --zone=$ZONE --tunnel-through-iap $SCRIPT_DIR/docker/docker-compose.yml $SCRIPT_DIR/docker/management.json.template $SCRIPT_DIR/docker/.env.template $SCRIPT_DIR/docker/deploy.sh $VM_NAME:/tmp/"
+SCP_CMD="gcloud compute scp --project=$VPN_PROJECT --zone=$ZONE --tunnel-through-iap $SCRIPT_DIR/netbird/docker-compose.yml $SCRIPT_DIR/netbird/management.json.template $SCRIPT_DIR/netbird/.env.template $SCRIPT_DIR/netbird/deploy.sh $VM_NAME:/tmp/"
 log_cmd "$SCP_CMD"
 gcloud compute scp --project="$VPN_PROJECT" --zone="$ZONE" --tunnel-through-iap \
-  "$SCRIPT_DIR/docker/docker-compose.yml" \
-  "$SCRIPT_DIR/docker/management.json.template" \
-  "$SCRIPT_DIR/docker/.env.template" \
-  "$SCRIPT_DIR/docker/deploy.sh" \
+  "$SCRIPT_DIR/netbird/docker-compose.yml" \
+  "$SCRIPT_DIR/netbird/management.json.template" \
+  "$SCRIPT_DIR/netbird/.env.template" \
+  "$SCRIPT_DIR/netbird/deploy.sh" \
   "$VM_NAME:/tmp/"
 
 log_info "Files uploaded to /tmp on $VM_NAME."
 
-log_step "⚡ [2/2] Executing Remote Deployer (/opt/dpi/deploy.sh) on VM..."
+log_step "⚡ [2/2] Executing Remote Deployer ($REMOTE_DIR/deploy.sh) on VM..."
 
-RUN_DEPLOY_CMD="gcloud compute ssh $VM_NAME --project=$VPN_PROJECT --zone=$ZONE --tunnel-through-iap --command=\"sudo mv /tmp/deploy.sh $REMOTE_DIR/deploy.sh && sudo chmod +x $REMOTE_DIR/deploy.sh && sudo $REMOTE_DIR/deploy.sh\""
+RUN_DEPLOY_CMD="gcloud compute ssh $VM_NAME --project=$VPN_PROJECT --zone=$ZONE --tunnel-through-iap --command=\"sudo mkdir -p $REMOTE_DIR && sudo mv /tmp/deploy.sh $REMOTE_DIR/deploy.sh && sudo chmod +x $REMOTE_DIR/deploy.sh && sudo $REMOTE_DIR/deploy.sh\""
 log_cmd "$RUN_DEPLOY_CMD"
 
 gcloud compute ssh "$VM_NAME" --project="$VPN_PROJECT" --zone="$ZONE" --tunnel-through-iap --command="
+  sudo mkdir -p $REMOTE_DIR
   sudo mv /tmp/deploy.sh $REMOTE_DIR/deploy.sh
   sudo chmod +x $REMOTE_DIR/deploy.sh
   sudo $REMOTE_DIR/deploy.sh

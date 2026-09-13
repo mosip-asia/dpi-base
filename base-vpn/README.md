@@ -23,9 +23,10 @@ base-vpn/
 ├── README.md              # Architecture and operating runbook
 ├── remote-deploy.sh       # Zero-downtime deployer & stack updater (runs locally over IAP)
 ├── update_oauth.sh        # Helper script to inject Google OAuth credentials
-├── docker/                # Canonical application stack (monitored by Dependabot)
-│   ├── deploy.sh          # VM-side service runner and compose manager (/opt/dpi/deploy.sh)
+├── netbird/               # Canonical application stack & service manifests (monitored by Dependabot)
+│   ├── deploy.sh          # VM-side service runner and compose manager (/opt/netbird/deploy.sh)
 │   ├── docker-compose.yml # Traefik v3 + NetBird services with pinned versions
+│   ├── .env.template      # Environment variables template
 │   └── management.json.template # NetBird management & OIDC config template
 └── terraform/             # Decoupled infrastructure code
     ├── backend.tf         # GCS backend (gs://base-dpi-ait-ac-th-tfstate/base-vpn)
@@ -74,13 +75,13 @@ terraform -chdir=base-vpn/terraform apply
 ```
 
 ### Step 2: Deploy Container Stack (Zero-Downtime)
-Uploads `docker-compose.yml`, renders `management.json`, injects secrets, and executes `docker/deploy.sh` on the VM over secure IAP:
+Uploads service manifests to `/tmp/`, and executes `netbird/deploy.sh` on the VM over secure IAP:
 ```bash
 ./base-vpn/remote-deploy.sh
 ```
 
 ### Step 3: Automated Major Version Alerts (Dependabot)
-GitHub Dependabot (`.github/dependabot.yml`) monitors `base-vpn/docker/docker-compose.yml`.
+GitHub Dependabot (`.github/dependabot.yml`) monitors `base-vpn/netbird/docker-compose.yml`.
 - Patch and minor updates are ignored to prevent noise.
 - Dependabot will automatically open a Pull Request when a **MAJOR** version of Traefik or NetBird is released.
 - When a major version update PR is merged, deploy the update instantly with **zero VM recreation**:

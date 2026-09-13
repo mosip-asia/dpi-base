@@ -31,7 +31,7 @@ services:
       - "443:443"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "/opt/dpi/traefik/acme.json:/etc/traefik/acme.json"
+      - "/opt/netbird/traefik/acme.json:/etc/traefik/acme.json"
       - "/etc/localtime:/etc/localtime:ro"
       - "/etc/timezone:/etc/timezone:ro"
     networks:
@@ -95,8 +95,8 @@ services:
       - NB_SETUP_PAT_ENABLED=true
     command: ["--config", "/etc/netbird/management.json", "--log-file", "console"]
     volumes:
-      - "/opt/dpi/netbird/management.json:/etc/netbird/management.json"
-      - "/opt/dpi/netbird/data:/var/lib/netbird"
+      - "/opt/netbird/management.json:/etc/netbird/management.json"
+      - "/opt/netbird/data:/var/lib/netbird"
       - "/etc/localtime:/etc/localtime:ro"
       - "/etc/timezone:/etc/timezone:ro"
     labels:

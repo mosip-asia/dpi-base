@@ -12,7 +12,7 @@ updates:
   # 🐳 NetBird Mesh VPN & Traefik Edge Proxy (Major Updates)
   # ==========================================================
   - package-ecosystem: "docker-compose"
-    directory: "/base-vpn/docker"
+    directory: "/base-vpn/netbird"
     schedule:
       interval: "weekly"
       day: "monday"
