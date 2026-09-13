@@ -176,7 +176,8 @@ OUTPUT_TFVARS_PATH="${TARGET_TF_DIR}/terraform.tfvars"
 TARGET_TF_REL="${TARGET_TF_DIR#"${REPO_ROOT}/"}"
 
 readonly PROJECT_ID="${DOMAIN_NAME}-mgmt"
-readonly BUCKET_NAME="${DOMAIN_NAME}-tfstate"
+STATE_BUCKET="${STATE_BUCKET:-${DOMAIN_NAME}-tfstate}"
+readonly BUCKET_NAME="${STATE_BUCKET}"
 readonly SUBDOMAIN="${DOMAIN_NAME}.${PARENT_DOMAIN}"
 readonly MASKED_BILLING="${BILLING_ACCOUNT_ID:0:6}-XXXXXX-${BILLING_ACCOUNT_ID:15:6}"
 
@@ -395,10 +396,19 @@ else
     plan_action "CREATE" "Bucket 'gs://${BUCKET_NAME}' in ${REGION} (Singapore, Versioning ON)"
   else
     echo "    Creating bucket 'gs://${BUCKET_NAME}' in ${REGION}..."
-    gcloud storage buckets create "gs://${BUCKET_NAME}" \
+    if ! gcloud storage buckets create "gs://${BUCKET_NAME}" \
       --project="${PROJECT_ID}" \
       --location="${REGION}" \
-      --uniform-bucket-level-access
+      --uniform-bucket-level-access; then
+      echo ""
+      echo -e "${COLOR_RED}❌ ERROR: Bucket name 'gs://${BUCKET_NAME}' is globally taken by another Google Cloud customer.${COLOR_RESET}"
+      echo "👉 Resolution:"
+      echo "   Add a unique bucket name to your .env file, for example:"
+      echo "   STATE_BUCKET=\"dpi-${DOMAIN_NAME}-tfstate\""
+      echo ""
+      echo "   Then re-run ./scripts/bootstrap_domain.sh"
+      exit 1
+    fi
     echo -e "    ${COLOR_GREEN}[CREATED]${COLOR_RESET} Bucket gs://${BUCKET_NAME}."
   fi
 fi
