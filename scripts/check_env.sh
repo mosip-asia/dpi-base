@@ -205,7 +205,7 @@ else
 fi
 
 echo ""
-echo "--- [2/2] Live Google Cloud Pre-Flight Checks ---"
+echo "--- [2/2] Live Google Cloud IAM & Permission Readiness Checks ---"
 
 if [[ "${SKIP_GCP}" == "true" ]]; then
   echo -e " ${COLOR_YELLOW}[SKIP]${COLOR_RESET} Skipping GCP API checks (--skip-gcp requested)."
@@ -215,35 +215,62 @@ else
   export CLOUDSDK_METRICS_ENVIRONMENT="${CLOUDSDK_METRICS_ENVIRONMENT:-datacloud.antigravity}"
   ACTIVE_ACCOUNT=$(gcloud config get-value account 2>/dev/null || true)
   if [[ -z "${ACTIVE_ACCOUNT}" ]]; then
-    log_fail "gcloud Auth" "No active account. Run 'gcloud auth login' first."
+    log_fail "gcloud Auth" "No active account found. Run 'gcloud auth login' first."
   else
     log_ok "gcloud Auth" "Authenticated as ${ACTIVE_ACCOUNT}"
 
-    # Check Organization Access
+    echo ""
+    echo " Verifying required IAM roles for ${ACTIVE_ACCOUNT}..."
+    echo " -----------------------------------------------------------------"
+
+    # Check 1: Organization Access (organizationViewer / organizationAdmin)
     if gcloud organizations describe "${ORGANIZATION_ID}" >/dev/null 2>&1; then
-      log_ok "GCP Org Access" "Verified access to Organization ${ORGANIZATION_ID}"
+      log_ok "1. Org Access" "Verified access to Organization ${ORGANIZATION_ID}"
     else
-      log_warn "GCP Org Access" "Could not describe Org ${ORGANIZATION_ID}. Ensure account has Organization Viewer/Admin."
+      log_fail "1. Org Access" "Cannot describe Org ${ORGANIZATION_ID}. Need 'roles/resourcemanager.organizationViewer' or 'organizationAdmin'."
     fi
 
-    # Check Folder Access in Org
+    # Check 2: Folder Management / Creator (folderCreator / organizationAdmin)
     if gcloud resource-manager folders list --organization="${ORGANIZATION_ID}" --limit=1 >/dev/null 2>&1; then
-      log_ok "GCP Folder Access" "Verified permission to list/manage folders in Org"
+      log_ok "2. Folder Creator" "Verified permission to list/manage folders in Org ${ORGANIZATION_ID}"
     else
-      log_warn "GCP Folder Access" "Cannot list folders in Org ${ORGANIZATION_ID}. Ensure account has 'roles/resourcemanager.folderCreator' or 'roles/resourcemanager.organizationAdmin'."
+      log_fail "2. Folder Creator" "Cannot list/create folders in Org ${ORGANIZATION_ID}. Need 'roles/resourcemanager.folderCreator' or 'organizationAdmin'."
     fi
 
-    # Check Billing Account Access (only if not placeholder)
-    if [[ ! "${BILLING_ACCOUNT_ID}" =~ XXXX && -n "${BILLING_ACCOUNT_ID}" ]]; then
-      if gcloud billing accounts describe "${BILLING_ACCOUNT_ID}" >/dev/null 2>&1; then
-        IS_OPEN=$(gcloud billing accounts describe "${BILLING_ACCOUNT_ID}" --format="value(open)" 2>/dev/null || true)
-        if [[ "${IS_OPEN}" == "True" ]]; then
-          log_ok "Billing Account" "Verified active & OPEN (${MASKED_BILLING})"
-        else
-          log_warn "Billing Account" "Billing account found but status is not OPEN."
-        fi
+    # Check 3: Project Creation (projectCreator / organizationAdmin)
+    ORG_ROLES=$(gcloud organizations get-iam-policy "${ORGANIZATION_ID}" \
+      --flatten="bindings[].members" \
+      --filter="bindings.members:user:${ACTIVE_ACCOUNT}" \
+      --format="value(bindings.role)" 2>/dev/null || true)
+
+    if echo "${ORG_ROLES}" | grep -qE "roles/resourcemanager\.organizationAdmin|roles/resourcemanager\.projectCreator"; then
+      log_ok "3. Project Creator" "Verified 'projectCreator' or 'organizationAdmin' at Org root"
+    else
+      if [[ -n "${ORG_ROLES}" ]]; then
+        log_fail "3. Project Creator" "Missing 'roles/resourcemanager.projectCreator' or 'organizationAdmin' at Org root."
       else
-        log_warn "Billing Account" "Could not describe Billing Account ${MASKED_BILLING}. Ensure account has roles/billing.admin or billing.user."
+        log_warn "3. Project Creator" "Cannot inspect Org IAM policy. Verify '${ACTIVE_ACCOUNT}' has 'roles/resourcemanager.projectCreator'."
+      fi
+    fi
+
+    # Check 4: Billing Account Status (Active & Open)
+    BILLING_OPEN=false
+    if [[ ! "${BILLING_ACCOUNT_ID}" =~ XXXX && -n "${BILLING_ACCOUNT_ID}" ]]; then
+      IS_OPEN=$(gcloud billing accounts describe "${BILLING_ACCOUNT_ID}" --format="value(open)" 2>/dev/null || true)
+      if [[ "${IS_OPEN}" == "True" ]]; then
+        BILLING_OPEN=true
+        log_ok "4. Billing Status" "Billing Account ${MASKED_BILLING} is active and OPEN"
+      else
+        log_fail "4. Billing Status" "Billing Account ${MASKED_BILLING} not found or status is not OPEN."
+      fi
+    fi
+
+    # Check 5: Billing Project Linking Permission (billing.user / billing.admin)
+    if [[ "${BILLING_OPEN}" == "true" ]]; then
+      if gcloud billing projects list --billing-account="${BILLING_ACCOUNT_ID}" --limit=1 >/dev/null 2>&1; then
+        log_ok "5. Billing Linker" "Verified permission to link projects to ${MASKED_BILLING} (Role: billing.user / billing.admin)"
+      else
+        log_fail "5. Billing Linker" "Missing permission to link projects to ${MASKED_BILLING}. Need 'roles/billing.user' or 'roles/billing.admin' on this billing account."
       fi
     fi
   fi
@@ -252,14 +279,24 @@ fi
 echo ""
 echo "================================================================="
 if [[ ${ERRORS} -eq 0 ]]; then
-  echo -e "${COLOR_GREEN} ✅ Configuration is VALID! (0 errors, ${WARNINGS} warnings)${COLOR_RESET}"
+  echo -e "${COLOR_GREEN} ✅ All configuration & IAM readiness checks PASSED! (0 errors, ${WARNINGS} warnings)${COLOR_RESET}"
   echo " You are ready to proceed with:"
   echo "   ./scripts/bootstrap_domain.sh --plan"
   echo "================================================================="
   exit 0
 else
-  echo -e "${COLOR_RED} ❌ Configuration check FAILED with ${ERRORS} error(s) and ${WARNINGS} warning(s).${COLOR_RESET}"
-  echo " Please fix the reported errors in '${ENV_FILE}' before continuing."
+  echo -e "${COLOR_RED} ❌ Readiness check FAILED with ${ERRORS} error(s) and ${WARNINGS} warning(s).${COLOR_RESET}"
+  echo " Please resolve the reported permission/configuration errors before continuing."
+  echo ""
+  echo " 💡 Quick Remediation Guide (Run as admin@dpi.ait.ac.th if roles are missing):"
+  echo "    1. To grant Organization & Folder admin rights:"
+  echo "       gcloud organizations add-iam-policy-binding ${ORGANIZATION_ID} \\"
+  echo "         --member=\"user:${ACTIVE_ACCOUNT:-<your-email>}\" \\"
+  echo "         --role=\"roles/resourcemanager.organizationAdmin\""
+  echo ""
+  echo "    2. To grant Billing linking rights:"
+  echo "       In GCP Console -> Billing -> Select '${MASKED_BILLING}' -> Account Management (or Permissions panel)"
+  echo "       Add '${ACTIVE_ACCOUNT:-<your-email>}' with role 'Billing Account User' (roles/billing.user)."
   echo "================================================================="
   exit 1
 fi
