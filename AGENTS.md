@@ -52,7 +52,10 @@ AI assistants and documentation templates MUST strictly adhere to the DPI domain
   The domain slug defines the GCP Folder name, the Cloud DNS namespace (`<domain>.dpi.ait.ac.th`), and the mandatory prefix for all projects in that domain (`<domain>-mgmt`, `<domain>-k3s`). The slug must use lowercase alphanumeric characters and hyphens only, with a strict maximum of **24 characters** to keep `<domain>-mgmt` under GCP's 30-character project ID limit.
 
 ### 5. Automation & Landing Zone Bootstrap Tooling
-- **Root Environment Configuration**: Repository-wide variables must reside at the repo root in `.env.example` (tracked) and `.env` (gitignored). Tooling must auto-detect target Terraform paths instead of requiring explicit path variables.
+- **Root & Stack Environment Configuration**:
+  - Repository-wide variables must reside at the repo root in `.env.example` (tracked) and `.env` (gitignored). Tooling must auto-detect target Terraform paths instead of requiring explicit path variables.
+  - VM service stacks must maintain a `.env.template` in git as the Single Source of Truth for all paths, project IDs, bucket names, and domain variables, with empty placeholders for dynamic secrets (`FOO=""`).
+  - Deployment scripts must source `.env.template` / `.env` for defaults and purge temporary `/tmp` staging files after moving them so no operator-owned (`ext_*`) files linger on the host.
 - **Pre-Flight Validation & DRY**: All environment validation logic must reside in `scripts/check_env.sh`. Bootstrap scripts must invoke `check_env.sh` as Step 0 rather than duplicating checks.
 - **Dry-Run & Idempotent Apply**: Seed bootstrap scripts must support a `--plan` / `--dry-run` preview flag and be 100% idempotent (safe to run repeatedly without duplicating resources or errors).
 - **Local Org Admin Execution**: Seed bootstrapping (creating folders, linking billing accounts) must be executed locally by human Organization Administrators with 2FA, never delegated to high-privilege CI/CD service accounts.
@@ -82,6 +85,10 @@ AI assistants and documentation templates MUST strictly adhere to the DPI domain
      - Major changes (e.g., Terraform infrastructure, security configurations, network topologies) should be verified with dry-run/plan execution logs and diff summaries documented in commit messages or PR comments.
   4. **Task Checklist Synchronization**:
      - Maintain strict alignment between the GitHub Issue acceptance criteria, the master task tracking checklist in `STATUS.md`, and the PR implementation checklist. Task completion checklists in `STATUS.md` must be kept in lockstep with GitHub Issues.
+  5. **Issue Specification Revision & Handover Delineation**:
+     - When updating or handing over an existing GitHub Issue specification, clearly delineate new/revised active specifications from historical original drafts.
+     - Place the active specification at the top with an `[!IMPORTANT]` alert block, clear assignee, and current live status.
+     - Preserve the original historical draft at the bottom inside an expandable `<details><summary>📜 Original Draft Specification (Historical Archive - Click to Expand)</summary>` block to maintain a full audit trail without confusing collaborators.
 
 
 ---
@@ -101,6 +108,20 @@ AI assistants and documentation templates MUST strictly adhere to the DPI domain
     - **Zero Static SSH Keys**: All Compute Engine VMs must enforce `enable-oslogin = "TRUE"` and restrict SSH (port 22) strictly to Google Identity-Aware Proxy (IAP: `35.235.240.0/20`). Never bake static SSH public keys into `cloud-init` or instance metadata. Operators authenticate via their individual Google accounts (`@ait.asia`) with personal 2FA.
     - **Zero Plaintext Secrets in Cloud-Init**: Never store passwords, OAuth credentials, API keys, or private keys inside `cloud-init` user-data (which is stored in plaintext metadata). Attach a dedicated service account with granular `roles/secretmanager.secretAccessor` on `<domain>-mgmt` Secret Manager, pulling credentials into local root-owned mode `0600` files at runtime.
     - **Decoupled Compute vs. Application Lifecycle**: `cloud-init` strictly provisions OS packages, Docker CE, directories, and systemd units. Container workloads (e.g. `docker-compose.yml`) are deployed and updated independently over secure IAP to eliminate destructive VM recreations on version bumps.
+    - **Unprivileged System Operator & Permissions Model**:
+      - Add the default system account (`ubuntu`) to the `docker` group (`usermod -aG docker ubuntu`).
+      - The service root directory (`/opt/<service>`) and all application manifests must be owned by `ubuntu:docker`.
+      - Sensitive files (`.env`, `management.json`) must be restricted to mode `0600` (readable/writable only by `ubuntu`).
+      - Strict exception: Traefik certificate stores (`acme.json`) must remain `0600 root:root` because Traefik's internal security scanner rejects certificate files not owned by root.
+      - Provide an IAP SSH connector (`ssh.sh`) executing `-t "sudo -i -u ubuntu"` so operators drop directly into the `ubuntu` shell with native Docker access without typing `sudo`.
+      - Deployment scripts must explicitly purge `/tmp` staging files after syncing to ensure no `ext_*` artifacts remain.
+    - **Strict Decoupling: OS Bootstrapping (Cloud-Init) vs. Application Lifecycle (Deployer)**:
+      - `cloud-init` strictly provisions host OS prerequisites: OS packages, Docker CE, swapfile, timezone, loopback hosts, base directory skeleton, and systemd units. `cloud-init` MUST NEVER restore databases from GCS, write backup scripts, or configure crontabs.
+      - `deploy.sh` owns 100% of application state & lifecycle: Resolving secrets from GCP Secret Manager, restoring databases and TLS certificates from GCS, rendering `.env`, installing the 6-hourly backup crontab for root, managing containers, and executing initial state snapshots.
+    - **Flat 1:1 Service Directory Layout & Cron-Safe Scripts**:
+      - All stack manifests, deployers, and backup scripts must reside directly in `/opt/<service>/` matching the repository structure 1:1 with zero nested subdirectories.
+      - Scripts must dynamically discover their own directory (`SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"`) and source `.env` locally.
+      - All scripts invoked by `cron` must explicitly export a full `PATH` (`/usr/local/bin:/usr/bin:/bin:/snap/bin:${PATH:-}`) at the very top.
 
 
 
