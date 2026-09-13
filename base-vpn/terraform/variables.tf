@@ -43,7 +43,7 @@ variable "netbird_subdomain" {
 variable "machine_type" {
   type        = string
   description = "Machine type for NetBird VPN host VM"
-  default     = "e2-small"
+  default     = "e2-micro"
 }
 
 variable "state_bucket" {

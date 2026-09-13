@@ -10,6 +10,13 @@ packages:
 
 timezone: Asia/Bangkok
 
+# 2 GB swapfile to ensure e2-micro (1 GB RAM) operates reliably without OOM
+swap:
+  filename: /swapfile
+  size: 2147483648
+  maxsize: 2147483648
+
+
 write_files:
   - path: /opt/dpi/traefik/acme.json
     permissions: '0600'
