@@ -6,8 +6,8 @@
     {"Proto": "udp", "URI": "stun:stun2.l.google.com:19302"}
   ],
   "HttpConfig": {
-    "AuthClientID": "${google_oauth_client_id}",
-    "AuthAudience": "${google_oauth_client_id}",
+    "AuthClientID": "$GOOGLE_OAUTH_CLIENT_ID",
+    "AuthAudience": "$GOOGLE_OAUTH_CLIENT_ID",
     "AuthAuthority": "https://accounts.google.com",
     "AuthIssuer": "https://accounts.google.com",
     "AuthKeysLocation": "https://www.googleapis.com/oauth2/v3/certs",
@@ -15,9 +15,9 @@
   },
   "PKCEAuthorizationFlow": {
     "ProviderConfig": {
-      "ClientID": "${google_oauth_client_id}",
-      "ClientSecret": "${google_oauth_client_secret}",
-      "Audience": "${google_oauth_client_id}",
+      "ClientID": "$GOOGLE_OAUTH_CLIENT_ID",
+      "ClientSecret": "$GOOGLE_OAUTH_CLIENT_SECRET",
+      "Audience": "$GOOGLE_OAUTH_CLIENT_ID",
       "TokenEndpoint": "https://oauth2.googleapis.com/token",
       "AuthorizationEndpoint": "https://accounts.google.com/o/oauth2/v2/auth",
       "Scope": "openid profile email",
@@ -28,16 +28,16 @@
     }
   },
   "IdpManagerConfig": null,
-  "SingleAccountModeDomain": "${single_account_mode_domain}",
+  "SingleAccountModeDomain": "dpi.ait.ac.th",
   "Datadir": "/var/lib/netbird",
   "Signal": {
-    "URI": "${netbird_fqdn}:443",
+    "URI": "netbird.base.dpi.ait.ac.th:443",
     "Proto": "https"
   },
   "Relay": {
-    "Addresses": ["rels://${netbird_fqdn}:443/relay"],
+    "Addresses": ["rels://netbird.base.dpi.ait.ac.th:443/relay"],
     "CredentialsTTL": "24h0m0s",
-    "Secret": "${netbird_relay_secret}"
+    "Secret": "$NETBIRD_RELAY_SECRET"
   },
   "EmbeddedIdP": {
     "Enabled": false

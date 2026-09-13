@@ -15,23 +15,6 @@ write_files:
     permissions: '0600'
     content: ''
 
-  - path: /opt/dpi/.env
-    permissions: '0600'
-    content: |
-      GOOGLE_OAUTH_CLIENT_ID="${google_oauth_client_id}"
-      GOOGLE_OAUTH_CLIENT_SECRET="${google_oauth_client_secret}"
-      NETBIRD_RELAY_SECRET="${netbird_relay_secret}"
-
-  - path: /opt/dpi/docker-compose.yml
-    permissions: '0644'
-    content: |
-${indent(6, docker_compose_content)}
-
-  - path: /opt/dpi/netbird/management.json
-    permissions: '0644'
-    content: |
-${indent(6, management_json_content)}
-
   - path: /opt/dpi/scripts/backup_to_gcs.sh
     permissions: '0755'
     content: |
@@ -72,7 +55,7 @@ runcmd:
   # 2. Local loopback to bypass GCP hairpin NAT for Traefik
   - echo "127.0.0.1 ${netbird_fqdn}" >> /etc/hosts
 
-  # 3. Create required directories with proper permissions
+  # 3. Create required directory tree
   - mkdir -p /opt/dpi/netbird/data /opt/dpi/traefik /opt/dpi/scripts
   - chmod 600 /opt/dpi/traefik/acme.json
 
@@ -85,10 +68,9 @@ runcmd:
         echo "No previous NetBird database found in GCS. Starting clean."
     fi
 
-  # 5. Enable and start dpi-vpn service
+  # 5. Enable dpi-vpn service (auto-starts containers on reboot)
   - systemctl daemon-reload
   - systemctl enable dpi-vpn.service
-  - systemctl start dpi-vpn.service
 
   # 6. Install 6-hourly backup cron
   - (crontab -l 2>/dev/null | grep -v 'backup_to_gcs.sh' || true; echo "0 */6 * * * /opt/dpi/scripts/backup_to_gcs.sh >/dev/null 2>&1") | crontab -

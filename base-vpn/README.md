@@ -21,8 +21,12 @@
 ```text
 base-vpn/
 ├── README.md              # Architecture and operating runbook
+├── deploy.sh              # Zero-downtime deployer & stack updater
 ├── update_oauth.sh        # Helper script to inject Google OAuth credentials
-└── terraform/             # Flattened infrastructure code
+├── docker/                # Canonical application stack (monitored by Dependabot)
+│   ├── docker-compose.yml # Traefik v3 + NetBird services with pinned versions
+│   └── management.json.template # NetBird management & OIDC config template
+└── terraform/             # Decoupled infrastructure code
     ├── backend.tf         # GCS backend (gs://base-dpi-ait-ac-th-tfstate/base-vpn)
     ├── main.tf            # Provider configuration
     ├── variables.tf       # Parameter declarations
@@ -31,9 +35,7 @@ base-vpn/
     ├── dns.tf             # Decoupled DNS record in base-mgmt
     ├── outputs.tf         # Static IP, NetBird URL, VM outputs
     └── templates/
-        ├── cloud-init.yaml.tftpl    # Declarative OS provisioning & systemd service
-        ├── docker-compose.yml.tftpl # Traefik v3 + NetBird stack
-        └── management.json.tftpl    # NetBird management & OIDC config
+        └── cloud-init.yaml.tftpl # OS bootstrapping, Docker CE, and backup systemd unit
 ```
 
 ---
@@ -59,7 +61,8 @@ See complete setup instructions in [`base-mgmt/oauth_setup.md`](../base-mgmt/oau
 
 ## 🚀 Deployment & Operations
 
-### 1. Provision Infrastructure
+### Step 1: Provision Infrastructure (Terraform)
+Provisions the permanent regional static IP, firewall rules, decoupled DNS record, and the `e2-small` VM.
 ```bash
 # Validate pre-flight environment
 ./scripts/check_env.sh
@@ -69,31 +72,29 @@ terraform -chdir=base-vpn/terraform init
 terraform -chdir=base-vpn/terraform apply
 ```
 
-### 2. Component Version Management
-Component versions can be customized in `base-vpn/terraform/terraform.tfvars`:
-```hcl
-# Traefik Edge Proxy version
-traefik_version = "v3.7"
-
-# NetBird Control Plane version (Management, Signal, Relay)
-netbird_version = "0.78.1"
-
-# NetBird Dashboard UI version
-netbird_dashboard_version = "v2.92.0"
+### Step 2: Deploy Container Stack (Zero-Downtime)
+Uploads `docker-compose.yml`, renders `management.json`, and starts the containers on the VM:
+```bash
+./base-vpn/deploy.sh
 ```
 
-### 3. Automated Major Version Alerts (Dependabot)
-GitHub Dependabot (`.github/dependabot.yml`) monitors the canonical stack in `base-vpn/docker/docker-compose.yml`.
+### Step 3: Automated Major Version Alerts (Dependabot)
+GitHub Dependabot (`.github/dependabot.yml`) monitors `base-vpn/docker/docker-compose.yml`.
 - Patch and minor updates are ignored to prevent noise.
 - Dependabot will automatically open a Pull Request when a **MAJOR** version of Traefik or NetBird is released.
-- When an alert arrives, adjust `terraform.tfvars` and run `terraform apply` to upgrade.
+- When a major version update PR is merged, deploy the update instantly with **zero VM recreation**:
+  ```bash
+  git pull
+  ./base-vpn/deploy.sh
+  ```
 
-### 4. Inject Google OAuth Credentials
+### Step 4: Inject Google OAuth Credentials
 Once the OAuth Web Client ID and Secret are created in GCP Console (per [`oauth_setup.md`](../base-mgmt/oauth_setup.md)):
 ```bash
 ./base-vpn/update_oauth.sh "<CLIENT_ID>" "<CLIENT_SECRET>"
 ```
-This automatically saves credentials to Secret Manager and updates the running NetBird instance over secure IAP SSH without downtime or VM recreation.
+This automatically saves credentials to Secret Manager and restarts NetBird with the real OAuth provider.
+
 
 
 

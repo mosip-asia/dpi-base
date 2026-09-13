@@ -66,10 +66,11 @@
 | `2.1` | Create Project `base-vpn` & Link Billing | `base-vpn` (`945976338321`) | 🟢 Verified | Created via `prj-base-vpn.tf`, billing linked from Secret Manager, lien active |
 | `2.2` | Terraform Infrastructure & Cloud-Init | `base-vpn/terraform/` | 🟡 Scaffolding Ready | VM (`e2-small`), regional static IP, zero-trust firewall, `cloud-init` ready for apply |
 | `2.3` | Decoupled DNS Record | `base-mgmt` Cloud DNS zone | 🟡 Scaffolding Ready | `netbird.base.dpi.ait.ac.th` -> static IP in zone `dpi-base` |
-| `2.4` | NetBird Docker Stack & Traefik v3 Proxy | `templates/` | 🟡 Scaffolding Ready | Traefik v3 (Let's Encrypt), NetBird Dashboard, Signal, Management, Relay |
+| `2.4` | NetBird Docker Stack & Traefik v3 Proxy | `base-vpn/docker/` | 🟡 Scaffolding Ready | Traefik v3, NetBird stack, and zero-downtime `./base-vpn/deploy.sh` |
 | `2.5` | NetBird OAuth SSO & Admin Approval | Google OAuth2 Web Client | 🔴 Planned | Assisted via `./base-vpn/update_oauth.sh` once client ID/secret generated |
 
 ---
+
 
 
 ### Phase 3: Multi-Cluster Control Plane (`base-kube-ops`) (Planned)

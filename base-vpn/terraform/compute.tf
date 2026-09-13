@@ -1,12 +1,4 @@
 # ==========================================================
-# 🔐 Secrets & Dynamic Credentials
-# ==========================================================
-resource "random_password" "netbird_relay_secret" {
-  length  = 64
-  special = false
-}
-
-# ==========================================================
 # 🤖 Dedicated Service Account for VPN VM
 # ==========================================================
 resource "google_service_account" "vpn_sa" {
@@ -36,35 +28,14 @@ resource "google_project_iam_member" "vpn_sa_metric_writer" {
 }
 
 # ==========================================================
-# 📄 Template Rendering
+# 📄 Template Rendering (OS Level Only)
 # ==========================================================
 locals {
   netbird_fqdn = "${var.netbird_subdomain}.${trimsuffix(var.domain_name, ".")}"
 
-  docker_compose_rendered = templatefile("${path.module}/templates/docker-compose.yml.tftpl", {
-    netbird_fqdn    = local.netbird_fqdn
-    acme_email                = var.acme_email
-    traefik_version           = var.traefik_version
-    netbird_version           = var.netbird_version
-    netbird_dashboard_version = var.netbird_dashboard_version
-  })
-
-  management_json_rendered = templatefile("${path.module}/templates/management.json.tftpl", {
-    netbird_fqdn               = local.netbird_fqdn
-    google_oauth_client_id     = var.google_oauth_client_id
-    google_oauth_client_secret = var.google_oauth_client_secret
-    netbird_relay_secret       = random_password.netbird_relay_secret.result
-    single_account_mode_domain = var.single_account_mode_domain
-  })
-
   cloud_init_rendered = templatefile("${path.module}/templates/cloud-init.yaml.tftpl", {
-    netbird_fqdn               = local.netbird_fqdn
-    google_oauth_client_id     = var.google_oauth_client_id
-    google_oauth_client_secret = var.google_oauth_client_secret
-    netbird_relay_secret       = random_password.netbird_relay_secret.result
-    state_bucket               = var.state_bucket
-    docker_compose_content     = local.docker_compose_rendered
-    management_json_content    = local.management_json_rendered
+    netbird_fqdn = local.netbird_fqdn
+    state_bucket = var.state_bucket
   })
 }
 
@@ -76,7 +47,7 @@ resource "google_compute_instance" "vpn_vm" {
   project                   = var.project_id
   machine_type              = var.machine_type
   zone                      = var.zone
-  description               = "DPI Base 24/7 NetBird Mesh Network Tier (Traefik, NetBird Control Plane)"
+  description               = "DPI Base 24/7 NetBird Mesh Network Tier (Host OS & Docker Engine)"
   allow_stopping_for_update = true
 
   tags = ["base-vpn-node"]
