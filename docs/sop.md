@@ -130,12 +130,59 @@ terraform apply
 This provisions:
 - Project lien (prevents accidental project deletion).
 - Cloud DNS Managed Zone (`<domain>.dpi.ait.ac.th.`).
-- Secret Manager prerequisite placeholders.
-- Dedicated domain CI/CD Service Account.
+- Secret Manager prerequisite placeholders (`google-oauth-client-id`, `google-oauth-client-secret`).
+- Folder-level IAM bindings (`google_folder_iam_member`) for domain collaborators.
 
 ---
 
-### Step 1.4: One-Time Parent DNS Delegation Handshake
+### Step 1.4: Terraform Authentication Architecture (Human ADC vs. Service Account)
+
+When running Terraform against Google Cloud (e.g. state bucket locking, Secret Manager, Cloud DNS), Google Cloud requires an active **quota project** to attribute API gateway rate limits. Understanding how this operates is critical when designing access for multi-domain teams.
+
+#### 1. Why HTTP 403 `UserProjectAccountProblem` Occurs
+When an operator authenticates via human credentials (`gcloud auth application-default login`), the local ADC file (`~/.config/gcloud/application_default_credentials.json`) stores a `quota_project_id`. If that project is deleted, disabled, or unlinked from billing, Terraform fails before loading providers:
+```text
+User project billing account not in good standing. 
+The billing account for the owning project is disabled in state absent
+```
+
+#### 2. Architecture Comparison: Human ADC vs. Service Account
+
+| Criterion | Pattern A: Human ADC (`user:...`) | Pattern B: Dedicated Automation SA (`serviceAccount:...`) |
+| :--- | :--- | :--- |
+| **Identity Type** | External Google Identity (`@ait.asia`, `@gmail.com`) | Native GCP Resource (`<domain>-mgmt-terraform@<domain>-mgmt.iam.gserviceaccount.com`) |
+| **Quota Project** | Sourced from local workstation ADC (`quota_project_id`). | **Automatic**: Native to `<domain>-mgmt`. Google always attributes quota to the SA's parent project. |
+| **Permissions Scope** | Inherited from Org Admin or GCP Folder IAM. | Additive binding at the Folder level (`google_folder_iam_member` with `roles/editor`). |
+| **Workstation Consistency** | Requires each operator's ADC to point to an active project (`base-mgmt` or `<domain>-mgmt`). | **100% Identical** across all machines and CI/CD runners. Zero workstation drift. |
+| **CI/CD Compatibility** | ❌ Cannot run in automated pipelines (requires browser / 2FA). | ✅ Native support via GitHub Actions Workload Identity Federation (keyless). |
+
+#### 3. Team Decision Guidelines for Future Domains
+
+When onboarding a new sovereign domain (e.g., `mosip-asia`, `dlms`), teams should choose their operational model:
+
+* **Approach 1: Human Org Admin Apply (Day 0 Foundation)**:
+  - Human administrators run Terraform directly using personal 2FA.
+  - **Workstation Configuration**: Org Admins can keep ADC permanently pointed to `base-mgmt`. Domain-specific collaborators point to their own domain anchor:
+    ```bash
+    gcloud config set project <domain>-mgmt
+    gcloud auth application-default set-quota-project <domain>-mgmt
+    ```
+  - Best for: Initial landing zone bootstrap, seed governance, and single-operator environments.
+
+* **Approach 2: Folder-Level Service Account Impersonation & GitOps (Day 1+ Collaboration)**:
+  - Provision `<domain>-mgmt-terraform` inside `<domain>-mgmt` with additive Folder IAM (`roles/editor` on the domain's GCP folder).
+  - Human operators authenticate with their personal Google accounts and configure Terraform to impersonate the service account without downloading static JSON keys:
+    ```hcl
+    provider "google" {
+      impersonate_service_account = "<domain>-mgmt-terraform@<domain>-mgmt.iam.gserviceaccount.com"
+    }
+    ```
+  - CI/CD pipelines use Workload Identity Federation to deploy approved PRs automatically upon merge.
+  - Best for: Multi-contributor grant teams, automated GitOps pipelines, and strict audit compliance.
+
+---
+
+### Step 1.5: One-Time Parent DNS Delegation Handshake
 
 Google Cloud DNS assigns 4 nameservers dynamically from 5 shards (A through E). The parent zone must be updated **after** the child zone is created:
 
