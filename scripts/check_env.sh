@@ -150,7 +150,7 @@ fi
 # --- 3. Check BILLING_ACCOUNT_ID ---
 BILLING_ACCOUNT_ID="${BILLING_ACCOUNT_ID:-}"
 if [[ -z "${BILLING_ACCOUNT_ID}" ]]; then
-  log_fail "BILLING_ACCOUNT_ID" "Variable is empty or unset."
+  log_warn "BILLING_ACCOUNT_ID" "Empty (OK for workload developers; required for Day-0 bootstrap or relinking billing)"
 elif [[ "${BILLING_ACCOUNT_ID}" =~ ^01XXXX || "${BILLING_ACCOUNT_ID}" =~ XXXX ]]; then
   log_fail "BILLING_ACCOUNT_ID" "Still set to placeholder '${BILLING_ACCOUNT_ID}'. Enter real ID from GCP Console."
 elif [[ ! "${BILLING_ACCOUNT_ID}" =~ ^[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}$ ]]; then

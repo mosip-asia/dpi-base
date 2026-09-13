@@ -70,9 +70,9 @@ We enforce a strict separation between break-glass recovery and daily operationa
 
 ---
 
-## 🚀 Quickstart: Developer Workspace Setup (Zero-Drift)
+## 🚀 Quickstart: Developer Workspace Setup
 
-When onboarding as an operator or cloning this repository, follow this 3-step setup to synchronize environment configurations and secrets directly from Google Cloud Secret Manager:
+When onboarding as a contributor or cloning this repository, follow these steps to configure your local environment:
 
 ### 1. Authenticate with Google Cloud
 Ensure your local `gcloud` CLI and Application Default Credentials (ADC) are authenticated with your authorized operating identity (e.g. `@ait.asia`):
@@ -81,15 +81,21 @@ gcloud auth login
 gcloud auth application-default login
 ```
 
-### 2. Pull Authoritative Environment & Secrets
-Run the workspace synchronizer to automatically pull the Billing Account ID and platform secrets from `base-mgmt` Secret Manager:
+### 2. Configure Local Environment (`.env`)
+Copy the environment template:
 ```bash
-./scripts/pull_env.sh
+cp .env.example .env
 ```
-*This command validates your GCP IAM access and deterministically generates your local `.env` and `base-mgmt/terraform/terraform.tfvars` with 100% parity, zero manual copy-pasting, and zero configuration drift.*
+* **For Workload Developers & Contributors**:  
+  You can leave `BILLING_ACCOUNT_ID` blank (`BILLING_ACCOUNT_ID=""`). Child project envelopes (`prj-*.tf`) automatically query the billing account dynamically from GCP Secret Manager at runtime, so you do not need the billing ID on disk.
+* **For Management Plane Operators (Day-0 Bootstrap, Relinking Billing, or Secret Management)**:  
+  If you are an authorized administrator managing `<domain>-mgmt`, manually retrieve the billing ID from Secret Manager and set it in `.env`:
+  ```bash
+  gcloud secrets versions access latest --secret=billing-account-id --project=base-mgmt
+  ```
 
 ### 3. Verify Configuration
-Run pre-flight checks to ensure your workstation is ready:
+Run pre-flight checks to ensure your workstation and IAM permissions are ready:
 ```bash
 ./scripts/check_env.sh
 ```
@@ -107,12 +113,11 @@ dpi-base/
 ├── .env.example                   # Domain configuration template (copy to .env)
 │
 ├── scripts/                       # Platform Automation & Admin Tooling
-│   ├── pull_env.sh                # Workspace secret synchronizer from Secret Manager
 │   ├── check_env.sh               # Pre-flight environment & GCP API validator
 │   └── bootstrap_domain.sh        # Seed bootstrap with --plan & idempotent apply
-
 │
 ├── docs/                          # Standard Operating Procedures (Runbooks)
+
 │   ├── sop-domain-mgmt.md         # Domain Landing Zone & Management Plane Runbook
 │   └── sop-workload.md            # Workload Project & Compute Lifecycle Runbook
 │

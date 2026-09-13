@@ -120,16 +120,18 @@ This provisions:
 
 ---
 
-## 🔄 Step 4: Zero-Drift Developer Synchronization
+## 🔄 Step 4: Secret Management & Billing Resolution
 
-To ensure team members never need to manually copy or handle sensitive billing IDs, the billing account is pulled directly from Secret Manager:
+To ensure team members never need to manually copy or store sensitive billing IDs in version control, billing is resolved directly from Secret Manager:
 
-1. **Workstation Sync Command**:
+1. **For Workload Developers**:
+   Leave `BILLING_ACCOUNT_ID=""` in `.env`. Child projects query Secret Manager directly at runtime via Terraform data sources.
+2. **For Management Plane Operators (Relinking Billing or Day-0 Bootstrap)**:
+   Authorized administrators can retrieve the authoritative billing ID manually from Secret Manager:
    ```bash
-   ./scripts/pull_env.sh
+   gcloud secrets versions access latest --secret=billing-account-id --project=<domain>-mgmt
    ```
-   *Fetches `billing-account-id` from GCP Secret Manager and populates `.env` and `terraform.tfvars` automatically.*
-2. **Dynamic Terraform Resolution**:
+3. **Dynamic Terraform Resolution in Management Plane**:
    In `<domain>-mgmt/terraform/secrets.tf`:
    ```hcl
    data "google_secret_manager_secret_version" "billing_account" {
@@ -142,7 +144,7 @@ To ensure team members never need to manually copy or handle sensitive billing I
      billing_account_id = data.google_secret_manager_secret_version.billing_account.secret_data
    }
    ```
-   *Team members running Terraform never need `billing_account_id` in their local tfvars—Terraform queries Secret Manager dynamically.*
+   *Team members running Terraform never need `billing_account_id` in their local `terraform.tfvars`—Terraform queries Secret Manager dynamically.*
 
 ---
 

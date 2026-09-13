@@ -26,24 +26,25 @@ When a domain needs compute resources (e.g. a Kubernetes cluster, microservices,
 
 ---
 
-## 🚀 Step 1: Developer Workspace Setup (Zero-Drift)
+## 🚀 Step 1: Developer Workspace Setup
 
-Before working on any project, developers sync their local workstation directly from Google Cloud Secret Manager:
+Before working on any project, developers set up their local workstation:
 
-1. **Authenticate**:
+1. **Authenticate with Google Cloud**:
    ```bash
    gcloud auth login
    gcloud auth application-default login
    ```
-2. **Pull Secrets & Configuration**:
+2. **Configure Local Environment (`.env`)**:
    ```bash
-   ./scripts/pull_env.sh
+   cp .env.example .env
    ```
-   *Automatically sets up local `.env` and `terraform.tfvars` with 100% parity.*
+   *Note: For workload development, you can leave `BILLING_ACCOUNT_ID=""`. All project envelopes (`prj-*.tf`) fetch billing dynamically from Secret Manager at runtime.*
 3. **Verify Environment**:
    ```bash
    ./scripts/check_env.sh
    ```
+
 
 ---
 

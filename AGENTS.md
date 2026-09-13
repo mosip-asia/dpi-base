@@ -63,7 +63,8 @@ AI assistants and documentation templates MUST strictly adhere to the DPI domain
   1. **`README.md`**: What the repo is for (purpose, decoupled architecture, platform vs. sovereign domains, core projects, IAM governance, quickstart developer setup, and repo layout).
   2. **`STATUS.md`**: Current situation of the repo (phase roadmap 0–4, live asset inventory, master task tracking checklist, and immediate next steps).
   3. **`docs/sop-domain-mgmt.md`**: Sovereign Domain Landing Zone & Management Plane Runbook (Grant billing setup, seed bootstrap, `<domain>-mgmt`, Secret Manager integration, parent DNS handshake, and `prj-*.tf` project container envelopes).
-  4. **`docs/sop-workload.md`**: Workload Project & Compute Lifecycle Runbook (Workload naming `<domain>-<workload>`, workspace setup via `./scripts/pull_env.sh`, compute provisioning in `<domain>-<workload>/terraform/`, decoupled DNS records, and NetBird mesh VPN joining).
+  4. **`docs/sop-workload.md`**: Workload Project & Compute Lifecycle Runbook (Workload naming `<domain>-<workload>`, workspace setup via `.env`, compute provisioning in `<domain>-<workload>/terraform/`, decoupled DNS records, and NetBird mesh VPN joining).
+
   - *Anti-Sprawl Rule*: AI assistants must NEVER create fragmented markdown files in nested `docs/` folders. All documentation updates must directly update `README.md`, `STATUS.md`, `docs/sop-domain-mgmt.md`, or `docs/sop-workload.md`.
 
 - **Billing Account Naming Invariant**:
