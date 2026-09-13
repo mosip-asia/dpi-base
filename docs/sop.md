@@ -26,7 +26,7 @@ Every major initiative, research grant, or partner demonstrator operates as an a
 [New Domain: e.g. mosip-asia]
 ├── 📁 GCP Folder: mosip-asia                     (Resource & IAM Boundary)
 │   ├── 📦 Project: mosip-asia-mgmt               (Anchor Plane: State, Secrets, DNS)
-│   │   ├── 🪣 Bucket: gs://mosip-asia-tfstate    (State Backend, Versioning ON)
+│   │   ├── 🪣 Bucket: gs://mosip-asia-dpi-ait-ac-th-tfstate (State Backend, Versioning ON)
 │   │   ├── 🔑 Secret Manager                     (Application Secrets & Keys)
 │   │   └── 🌐 Cloud DNS: mosip-asia.dpi.ait.ac.th
 │   │
@@ -107,7 +107,7 @@ The seed bootstrap script automates folder creation, anchor project setup, billi
    ```bash
    ./scripts/bootstrap_domain.sh
    ```
-   *Safely provisions folder, project, billing association, core APIs, and `gs://<domain>-tfstate`.*
+   *Safely provisions folder, project, billing association, core APIs, and `gs://<domain>-dpi-ait-ac-th-tfstate`.*
 
 ---
 
@@ -120,7 +120,7 @@ Once the anchor project and bucket exist, deploy the domain's Terraform modules:
 cd <domain>-mgmt/terraform
 
 # Initialize backend with the domain's dedicated bucket
-terraform init -backend-config="bucket=<domain>-tfstate"
+terraform init -backend-config="bucket=<domain>-dpi-ait-ac-th-tfstate"
 
 # Review and apply
 terraform plan

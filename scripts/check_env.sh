@@ -276,12 +276,13 @@ else
     fi
 
     # Check 6: State Storage Bucket Availability (Global GCS Namespace)
-    STATE_BUCKET="${STATE_BUCKET:-${DOMAIN_NAME}-tfstate}"
+    PARENT_SLUG="${PARENT_DOMAIN//./-}"
+    STATE_BUCKET="${STATE_BUCKET:-${DOMAIN_NAME}-${PARENT_SLUG}-tfstate}"
     BUCKET_TEST_OUTPUT=$(gcloud storage buckets describe "gs://${STATE_BUCKET}" 2>&1 || true)
     if echo "${BUCKET_TEST_OUTPUT}" | grep -qi "404\|NotFound\|does not exist"; then
       log_ok "6. State Bucket" "Name 'gs://${STATE_BUCKET}' is AVAILABLE globally"
     elif echo "${BUCKET_TEST_OUTPUT}" | grep -qi "403\|AccessDenied\|Forbidden"; then
-      log_fail "6. State Bucket" "'gs://${STATE_BUCKET}' is globally taken by another GCP user. Set STATE_BUCKET in .env (e.g. 'dpi-${DOMAIN_NAME}-tfstate')."
+      log_fail "6. State Bucket" "'gs://${STATE_BUCKET}' is globally taken by another GCP user. Set STATE_BUCKET in .env."
     elif echo "${BUCKET_TEST_OUTPUT}" | grep -qi "storage.googleapis.com"; then
       log_ok "6. State Bucket" "Bucket 'gs://${STATE_BUCKET}' already exists and is accessible"
     else
