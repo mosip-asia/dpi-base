@@ -114,9 +114,30 @@ This provisions:
 1. **Project Protection Lien**: Prevents accidental deletion of the anchor project.
 2. **Cloud DNS Managed Zone**: Authoritative subzone (`<domain>.dpi.ait.ac.th.`).
 3. **Secret Manager Store**:
-   - `billing-account-id`: Populated with the domain's billing account ID.
-   - `google-oauth-client-id` & `google-oauth-client-secret`: SSO placeholders.
+   - `billing-account-id`: Secret container for the domain's billing account.
+   - `google-oauth-client-id` & `google-oauth-client-secret`: SSO credential containers.
 4. **Folder-Level IAM**: Additive bindings (`roles/editor`, `roles/resourcemanager.folderAdmin`) for team members.
+
+### Step 3.1: Seed Secret Payloads (One-Time Admin Seeding)
+
+Because sensitive values must never be committed to version control, the administrator seeds the actual payload into Secret Manager once out-of-band:
+
+```bash
+# 1. Seed Billing Account ID (if not already seeded by bootstrap_domain.sh):
+echo -n "${BILLING_ACCOUNT_ID}" | gcloud secrets versions add billing-account-id \
+  --project="<domain>-mgmt" \
+  --data-file=-
+
+# 2. Seed Google OAuth Client Credentials (once generated in GCP Console):
+echo -n "YOUR_GOOGLE_CLIENT_ID" | gcloud secrets versions add google-oauth-client-id \
+  --project="<domain>-mgmt" \
+  --data-file=-
+
+echo -n "YOUR_GOOGLE_CLIENT_SECRET" | gcloud secrets versions add google-oauth-client-secret \
+  --project="<domain>-mgmt" \
+  --data-file=-
+```
+*Once seeded, secret versions are permanent and immutable. All future Terraform runs query Secret Manager dynamically without needing secrets on disk.*
 
 ---
 
