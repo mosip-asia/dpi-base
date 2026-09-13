@@ -110,11 +110,17 @@ dpi-base/
 ├── README.md                      # Central landing page & architecture overview (this file)
 ├── AGENTS.md                      # AI Assistant context, system architecture, and operating rules
 ├── GEMINI.md                      # Shortcut pointer to AGENTS.md
+├── .env.example                   # 🌟 Domain configuration template (copy to .env)
+│
+├── scripts/                       # 🛠️ Platform Automation & Admin Tooling
+│   ├── check_env.sh               # Pre-flight environment & GCP API validator
+│   └── bootstrap_domain.sh        # Seed bootstrap with --plan & idempotent apply
 │
 ├── docs/                          # 📋 Operational SOPs, ADRs & Infrastructure Runbooks
 │   ├── decisions_and_onboarding.md # Complete team onboarding guide & architecture decisions
-│   ├── governance/                # 💳 GCP Multi-Billing, Grant Accounting & Resource SOP
-│   │   └── gcp_billing_and_management.md
+│   ├── governance/                # 💳 GCP Multi-Billing, Grant Accounting & Landing Zone SOPs
+│   │   ├── gcp_billing_and_management.md
+│   │   └── sop_new_domain_landing_zone.md
 │   └── infra/network/             # DNS topology and network runbooks
 │
 ├── dpi-mgmt/                      # 🛡️ GCP Project: `dpi-mgmt` (Cloud DNS & Governance)
@@ -136,6 +142,7 @@ dpi-base/
 ## 🚀 Quick Start & Next Steps
 
 1. Read the **Team Onboarding & Architecture Decisions** in [`docs/decisions_and_onboarding.md`](docs/decisions_and_onboarding.md).
-2. Review the implementation checklist in [`dpi-mgmt/checklist.md`](dpi-mgmt/checklist.md).
-3. Track active milestones on **[GitHub Epic #1](https://github.com/mosip-asia/dpi-base/issues/1)**.
+2. Provisioning a new initiative? Follow the **Domain Landing Zone SOP** in [`docs/governance/sop_new_domain_landing_zone.md`](docs/governance/sop_new_domain_landing_zone.md).
+3. Review the implementation checklist in [`dpi-mgmt/checklist.md`](dpi-mgmt/checklist.md).
+4. Track active milestones on **[GitHub Epic #1](https://github.com/mosip-asia/dpi-base/issues/1)**.
 

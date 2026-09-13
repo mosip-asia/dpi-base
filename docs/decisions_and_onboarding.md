@@ -25,7 +25,7 @@ Organization: dpi.ait.ac.th (350922776586)
 | **GCP Organization** | **`dpi.ait.ac.th`** | Governed under **Cloud Identity Free** ($0/month base). |
 | **Organization ID** | **`350922776586`** | Root node for all center projects and folders. |
 | **Directory Customer ID** | **`C0164ixfv`** | Google Workspace / Cloud Identity tenant identifier. |
-| **Core Billing Account** | **`0199A6-1E141B-DC72A5`** | `DPI Center - Base Platform` (linked to `dpi-base`). Dedicated accounts created per grant. |
+| **Core Billing Account** | **`0199A6-XXXXXX-XXXXXX`** | `DPI Center - Base Platform` (linked to `dpi-base`; confidential in GCP Console). Dedicated accounts created per grant. |
 | **Grant Billing Governance**| [Billing SOP](governance/gcp_billing_and_management.md) | Multi-billing architecture, grant accounting, and payment receipts SOP. |
 | **Root Management Folder** | **`dpi-base`** | Matches Git repository name 1:1; inherits admin IAM & consolidates billing. |
 | **Core Management Project**| **`dpi-mgmt`** (`189731855526`)| Permanent anchor for remote state (`gs://dpi-mgmt-tfstate`), CI/CD SA, and Secret Manager. |
@@ -157,6 +157,7 @@ To prevent accidental outages and credential leaks, we enforce a strict **"Break
   1. **Zero Blast Radius**: A mistake or `terraform destroy` in an application domain cannot affect `dpi-base` or another product.
   2. **Grant & Donor Cost Accounting**: Monthly cloud billing invoices are cleanly grouped by folder for effortless audit and donor grant reporting.
   3. **Multi-Repo Decoupling**: Application repositories manage their own infrastructure independently without needing IAM access to `dpi-base`.
+* **Standard Operating Procedure**: Step-by-step landing zone creation runbook is documented in [`docs/governance/sop_new_domain_landing_zone.md`](governance/sop_new_domain_landing_zone.md) with automation via [`scripts/bootstrap_domain.sh`](../scripts/bootstrap_domain.sh).
 
 ### Decision 8: Multi-Billing Account Architecture & Model A (Prepaid Top-Up) Grant Financing
 * **Context**:
@@ -170,7 +171,7 @@ To prevent accidental outages and credential leaks, we enforce a strict **"Break
      - **Instant Tax Receipt**: Google Cloud immediately generates an official Tax Receipt showing `DPI Center - <Team> Grant` and `$XXX.XX Paid`.
      - **Day 1 Reimbursement**: The PI submits this official PDF receipt to AIT Finance on the same day, securing reimbursement before their personal credit card statement closes.
      - **Hard Cap Safety**: Automated GCP Budget Threshold Alerts at 50%, 80%, and 100% prevent runaway spend, completely eliminating personal financial liability.
-* **Operational SOP**: Complete procedures and financial audit checklists are maintained in [`docs/governance/gcp_billing_and_management.md`](governance/gcp_billing_and_management.md).
+* **Operational SOP**: Complete procedures and financial audit checklists are maintained in [`docs/governance/gcp_billing_and_management.md`](governance/gcp_billing_and_management.md) and [`docs/governance/sop_new_domain_landing_zone.md`](governance/sop_new_domain_landing_zone.md).
 
 ---
 
@@ -202,7 +203,7 @@ dpi-base/
 │   └── infra/network/             # DNS topology and network diagrams
 ├── dpi-mgmt/                      # Core Management Plane (dpi-mgmt)
 │   ├── checklist.md               # Master phase tracking checklist
-│   └── terraform/foundation/      # Cloud DNS, IAM, Secret Manager, GCS State
+│   └── terraform/                 # Cloud DNS, IAM, Secret Manager, GCS State
 ├── dpi-vpn/                       # 24/7 Mesh VPN Tier (dpi-vpn)
 │   ├── terraform/                 # e2-small VM, static IP, firewall rules
 │   └── docker/                    # NetBird docker-compose

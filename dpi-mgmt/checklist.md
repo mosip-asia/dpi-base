@@ -61,10 +61,10 @@ flowchart TD
 | `0.3` | Unlock Domain Restricted Sharing Policy | GCP Org Policy | 🟢 | `iam.allowedPolicyMemberDomains` relaxed for `@ait.asia` |
 | `0.4` | Assign Organization Administrators | `akraradet@ait.asia`, `nuttasit@ait.asia` | 🟢 | Granted `organizationAdmin`, `projectCreator`, `billing.admin` |
 
-### Phase 1: Foundation Infrastructure (`dpi-mgmt/terraform/foundation/`)
+### Phase 1: Foundation Infrastructure (`dpi-mgmt/terraform/`)
 | Task ID | Task Description | Target Identity / Resource | Status | Notes / Output |
 | :--- | :--- | :--- | :---: | :--- |
-| `1.1` | Create management GCP project (`dpi-mgmt`) | `dpi-mgmt` (`189731855526`) | 🟢 | Linked to billing account `0199A6-1E141B-DC72A5` |
+| `1.1` | Create management GCP project (`dpi-mgmt`) | `dpi-mgmt` (`189731855526`) | 🟢 | Linked to Base Platform billing account `0199A6-XXXXXX-XXXXXX` |
 | `1.2` | Root GCP Folder (`dpi-base`) | GCP Resource Manager | 🟡 | Mirrors repo 1:1; consolidates billing & IAM inheritance |
 | `1.3` | Enable core GCP APIs | Compute, DNS, IAM, Secret Manager | 🟢 | Enabled in `dpi-mgmt` |
 | `1.4` | Set up Terraform remote state bucket (`gs://dpi-mgmt-tfstate`)| Cloud Storage | 🟢 | `asia-southeast1`, versioning ON, uniform access ON |
