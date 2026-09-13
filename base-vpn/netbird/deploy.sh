@@ -38,6 +38,16 @@ fi
 
 mkdir -p "$SERVICE_DIR/traefik" "$SERVICE_DIR/data" "$SERVICE_DIR/scripts"
 
+# Ensure acme.json is a regular file with 0600 permissions (not a directory)
+if [ -d "$SERVICE_DIR/traefik/acme.json" ]; then
+  log_warn "acme.json was created as a directory. Recreating as a secure 0600 file..."
+  sudo rm -rf "$SERVICE_DIR/traefik/acme.json"
+fi
+if [ ! -f "$SERVICE_DIR/traefik/acme.json" ]; then
+  sudo touch "$SERVICE_DIR/traefik/acme.json"
+fi
+sudo chmod 600 "$SERVICE_DIR/traefik/acme.json"
+
 # 1. Move uploaded files from /tmp to /opt/netbird
 echo -e "\n${BOLD}--- [1/5] Syncing Application Manifests ---${NC}"
 if [ -f /tmp/docker-compose.yml ]; then

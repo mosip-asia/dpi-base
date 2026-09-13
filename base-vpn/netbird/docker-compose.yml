@@ -57,11 +57,18 @@ services:
       - USE_AUTH0=false
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.netbird-dashboard.rule=Host(`${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}`) || Host(`${PROD_FQDN:-netbird.dpi.ait.ac.th}`)"
+      # Base Domain Router
+      - "traefik.http.routers.netbird-dashboard.rule=Host(`${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}`)"
       - "traefik.http.routers.netbird-dashboard.entrypoints=websecure"
       - "traefik.http.routers.netbird-dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.netbird-dashboard.priority=1"
       - "traefik.http.services.netbird-dashboard.loadbalancer.server.port=80"
+      # Production Domain Router (Active once CNAME is configured)
+      - "traefik.http.routers.netbird-dashboard-prod.rule=Host(`${PROD_FQDN:-netbird.dpi.ait.ac.th}`)"
+      - "traefik.http.routers.netbird-dashboard-prod.entrypoints=websecure"
+      - "traefik.http.routers.netbird-dashboard-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.netbird-dashboard-prod.priority=1"
+      - "traefik.http.routers.netbird-dashboard-prod.service=netbird-dashboard"
     networks:
       - vpn-network
 
@@ -76,13 +83,20 @@ services:
       - "/etc/timezone:/etc/timezone:ro"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.netbird-signal.rule=(Host(`${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}`) || Host(`${PROD_FQDN:-netbird.dpi.ait.ac.th}`)) && PathPrefix(`/signalexchange.SignalExchange/`)"
+      # Base Domain Router
+      - "traefik.http.routers.netbird-signal.rule=Host(`${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}`) && PathPrefix(`/signalexchange.SignalExchange/`)"
       - "traefik.http.routers.netbird-signal.entrypoints=websecure"
       - "traefik.http.routers.netbird-signal.tls.certresolver=letsencrypt"
       - "traefik.http.routers.netbird-signal.priority=100"
       - "traefik.http.routers.netbird-signal.service=netbird-signal"
       - "traefik.http.services.netbird-signal.loadbalancer.server.port=80"
       - "traefik.http.services.netbird-signal.loadbalancer.server.scheme=h2c"
+      # Production Domain Router (Active once CNAME is configured)
+      - "traefik.http.routers.netbird-signal-prod.rule=Host(`${PROD_FQDN:-netbird.dpi.ait.ac.th}`) && PathPrefix(`/signalexchange.SignalExchange/`)"
+      - "traefik.http.routers.netbird-signal-prod.entrypoints=websecure"
+      - "traefik.http.routers.netbird-signal-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.netbird-signal-prod.priority=100"
+      - "traefik.http.routers.netbird-signal-prod.service=netbird-signal"
     networks:
       - vpn-network
 
@@ -101,12 +115,19 @@ services:
       - "/etc/timezone:/etc/timezone:ro"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.netbird-mgmt.rule=(Host(`${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}`) || Host(`${PROD_FQDN:-netbird.dpi.ait.ac.th}`)) && (PathPrefix(`/api`) || PathPrefix(`/management.`) || PathPrefix(`/.well-known`) || PathPrefix(`/oauth2`) || PathPrefix(`/dex`))"
+      # Base Domain Router
+      - "traefik.http.routers.netbird-mgmt.rule=Host(`${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}`) && (PathPrefix(`/api`) || PathPrefix(`/management.`) || PathPrefix(`/.well-known`) || PathPrefix(`/oauth2`) || PathPrefix(`/dex`))"
       - "traefik.http.routers.netbird-mgmt.entrypoints=websecure"
       - "traefik.http.routers.netbird-mgmt.tls.certresolver=letsencrypt"
       - "traefik.http.routers.netbird-mgmt.priority=10"
       - "traefik.http.services.netbird-mgmt.loadbalancer.server.port=80"
       - "traefik.http.services.netbird-mgmt.loadbalancer.server.scheme=h2c"
+      # Production Domain Router (Active once CNAME is configured)
+      - "traefik.http.routers.netbird-mgmt-prod.rule=Host(`${PROD_FQDN:-netbird.dpi.ait.ac.th}`) && (PathPrefix(`/api`) || PathPrefix(`/management.`) || PathPrefix(`/.well-known`) || PathPrefix(`/oauth2`) || PathPrefix(`/dex`))"
+      - "traefik.http.routers.netbird-mgmt-prod.entrypoints=websecure"
+      - "traefik.http.routers.netbird-mgmt-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.netbird-mgmt-prod.priority=10"
+      - "traefik.http.routers.netbird-mgmt-prod.service=netbird-mgmt"
     networks:
       - vpn-network
 
@@ -122,10 +143,16 @@ services:
       - "--log-level=info"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.netbird-relay.rule=(Host(`${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}`) || Host(`${PROD_FQDN:-netbird.dpi.ait.ac.th}`)) && PathPrefix(`/relay`)"
+      # Base Domain Router
+      - "traefik.http.routers.netbird-relay.rule=Host(`${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}`) && PathPrefix(`/relay`)"
       - "traefik.http.routers.netbird-relay.entrypoints=websecure"
       - "traefik.http.routers.netbird-relay.tls.certresolver=letsencrypt"
       - "traefik.http.services.netbird-relay.loadbalancer.server.port=33080"
+      # Production Domain Router (Active once CNAME is configured)
+      - "traefik.http.routers.netbird-relay-prod.rule=Host(`${PROD_FQDN:-netbird.dpi.ait.ac.th}`) && PathPrefix(`/relay`)"
+      - "traefik.http.routers.netbird-relay-prod.entrypoints=websecure"
+      - "traefik.http.routers.netbird-relay-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.netbird-relay-prod.service=netbird-relay"
     networks:
       - vpn-network
 
