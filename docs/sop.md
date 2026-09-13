@@ -255,6 +255,38 @@ All downstream VMs (e.g., K3s nodes) connect to the central control plane secure
 
 ---
 
+### Step 2.4: Managing Project DNS Records (Decoupled Record Ownership)
+
+To prevent the management plane (`<domain>-mgmt` or `base-mgmt`) from becoming a bottleneck with hardcoded server IP addresses, **workload and tier projects own their own DNS records directly in their own Terraform code**.
+
+Because team members inherit `roles/editor` on the parent folder, workload projects can declare `google_dns_record_set` resources targeting the domain's managed zone:
+
+```hcl
+# Inside <domain>-<workload>/terraform/dns.tf:
+
+# 1. Allocate workload static IP
+resource "google_compute_address" "service_ip" {
+  name   = "service-static-ip"
+  region = "asia-southeast1"
+}
+
+# 2. Directly create and bind the A record in the domain's subzone
+resource "google_dns_record_set" "service" {
+  project      = "base-mgmt"                     # Anchor project where the zone resides
+  managed_zone = "dpi-base"                      # Central managed zone name
+  name         = "service.base.dpi.ait.ac.th."   # Fully qualified domain name
+  type         = "A"
+  ttl          = 300
+  rrdatas      = [google_compute_address.service_ip.address]
+}
+```
+
+*Key Advantages*:
+- **Lifecycle Alignment**: When a VM or IP is deleted or replaced, its DNS record is updated or destroyed automatically by Terraform.
+- **Zero Bottlenecks**: Developers do not need to modify `<domain>-mgmt` just to map a DNS record to their newly provisioned IP address.
+
+---
+
 ## 🛡️ Part 3: Base Platform Operations (`base`)
 
 The platform engine (`base`) provides shared services for all sovereign domains:
