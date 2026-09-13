@@ -51,3 +51,29 @@ variable "state_bucket" {
   description = "GCS bucket name for state and SQLite database backups"
   default     = "base-dpi-ait-ac-th-tfstate"
 }
+
+variable "acme_email" {
+  type        = string
+  description = "Let's Encrypt ACME registration email"
+  default     = "admin@dpi.ait.ac.th"
+}
+
+variable "google_oauth_client_id" {
+  type        = string
+  description = "Google OAuth 2.0 Web Client ID for NetBird SSO"
+  default     = "PLACEHOLDER_CLIENT_ID.apps.googleusercontent.com"
+}
+
+variable "google_oauth_client_secret" {
+  type        = string
+  description = "Google OAuth 2.0 Web Client Secret for NetBird SSO"
+  default     = "PLACEHOLDER_CLIENT_SECRET"
+  sensitive   = true
+}
+
+variable "single_account_mode_domain" {
+  type        = string
+  description = "Primary domain for NetBird single-account mode auto-enrollment"
+  default     = "dpi.ait.ac.th"
+}
+

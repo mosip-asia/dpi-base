@@ -28,14 +28,14 @@
     }
   },
   "IdpManagerConfig": null,
-  "SingleAccountModeDomain": "dpi.ait.ac.th",
+  "SingleAccountModeDomain": "$SINGLE_ACCOUNT_MODE_DOMAIN",
   "Datadir": "/var/lib/netbird",
   "Signal": {
-    "URI": "netbird.base.dpi.ait.ac.th:443",
+    "URI": "$NETBIRD_FQDN:443",
     "Proto": "https"
   },
   "Relay": {
-    "Addresses": ["rels://netbird.base.dpi.ait.ac.th:443/relay"],
+    "Addresses": ["rels://$NETBIRD_FQDN:443/relay"],
     "CredentialsTTL": "24h0m0s",
     "Secret": "$NETBIRD_RELAY_SECRET"
   },

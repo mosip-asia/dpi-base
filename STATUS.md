@@ -64,10 +64,11 @@
 | Task ID | Task Description | Target Resource | Status | Notes / Output |
 | :---: | :--- | :--- | :--- | :--- |
 | `2.1` | Create Project `base-vpn` & Link Billing | `base-vpn` (`945976338321`) | 🟢 Verified | Created via `prj-base-vpn.tf`, billing linked from Secret Manager, lien active |
-| `2.2` | Terraform Infrastructure & Cloud-Init | `base-vpn/terraform/` | 🟡 Scaffolding Ready | VM (`e2-small`), regional static IP, zero-trust firewall, `cloud-init` ready for apply |
+| `2.2` | Terraform Infrastructure & Cloud-Init | `base-vpn/terraform/` | 🟡 Scaffolding Ready | VM (`e2-small`), regional static IP, zero-trust firewalls, random relay secret |
 | `2.3` | Decoupled DNS Record | `base-mgmt` Cloud DNS zone | 🟡 Scaffolding Ready | `netbird.base.dpi.ait.ac.th` -> static IP in zone `dpi-base` |
-| `2.4` | NetBird Docker Stack & Traefik v3 Proxy | `base-vpn/docker/` | 🟡 Scaffolding Ready | Traefik v3, NetBird stack, and zero-downtime `./base-vpn/deploy.sh` |
-| `2.5` | NetBird OAuth SSO & Admin Approval | Google OAuth2 Web Client | 🔴 Planned | Assisted via `./base-vpn/update_oauth.sh` once client ID/secret generated |
+| `2.4` | NetBird Docker Stack & Traefik v3 Proxy | `base-vpn/docker/` | 🟡 Scaffolding Ready | Traefik v3, NetBird stack, and Dependabot major-only filter |
+| `2.5` | Automated Metadata Watcher & Sync | `dpi-metadata-watcher.service` | 🟡 Scaffolding Ready | Native long-polling (`wait_for_change=true`), in-place `.env` sync & zero-downtime service reload |
+| `2.6` | NetBird OAuth SSO & Admin Approval | Google OAuth2 Web Client | 🔴 Planned | Assisted via `./base-vpn/update_oauth.sh` or Terraform metadata once credentials generated |
 
 ---
 

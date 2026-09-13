@@ -37,17 +37,24 @@ fi
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-cat << ENV_EOF > "$TMP_DIR/.env"
 NETBIRD_FQDN="netbird.base.dpi.ait.ac.th"
 ACME_EMAIL="admin@dpi.ait.ac.th"
+SINGLE_ACCOUNT_MODE_DOMAIN="dpi.ait.ac.th"
+
+cat << ENV_EOF > "$TMP_DIR/.env"
+NETBIRD_FQDN="$NETBIRD_FQDN"
+ACME_EMAIL="$ACME_EMAIL"
 GOOGLE_OAUTH_CLIENT_ID="$OAUTH_CLIENT_ID"
 GOOGLE_OAUTH_CLIENT_SECRET="$OAUTH_CLIENT_SECRET"
 NETBIRD_RELAY_SECRET="$RELAY_SECRET"
+SINGLE_ACCOUNT_MODE_DOMAIN="$SINGLE_ACCOUNT_MODE_DOMAIN"
 ENV_EOF
 
 sed -e "s|\$GOOGLE_OAUTH_CLIENT_ID|$OAUTH_CLIENT_ID|g" \
     -e "s|\$GOOGLE_OAUTH_CLIENT_SECRET|$OAUTH_CLIENT_SECRET|g" \
     -e "s|\$NETBIRD_RELAY_SECRET|$RELAY_SECRET|g" \
+    -e "s|\$SINGLE_ACCOUNT_MODE_DOMAIN|$SINGLE_ACCOUNT_MODE_DOMAIN|g" \
+    -e "s|\$NETBIRD_FQDN|$NETBIRD_FQDN|g" \
     "$SCRIPT_DIR/docker/management.json.template" > "$TMP_DIR/management.json"
 
 cp "$SCRIPT_DIR/docker/docker-compose.yml" "$TMP_DIR/docker-compose.yml"
