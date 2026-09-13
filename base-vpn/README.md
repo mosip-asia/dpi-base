@@ -26,7 +26,7 @@ base-vpn/
 ├── update_oauth.sh        # Helper script to inject Google OAuth credentials
 ├── netbird/               # Canonical application stack & service manifests (monitored by Dependabot)
 │   ├── deploy.sh          # VM-side service runner and compose manager (/opt/netbird/deploy.sh)
-│   ├── backup_to_gcs.sh   # State & certificate snapshot script to GCS (/opt/netbird/scripts/backup_to_gcs.sh)
+│   ├── backup_to_gcs.sh   # State & certificate snapshot script to GCS (/opt/netbird/backup_to_gcs.sh)
 │   ├── docker-compose.yml # Traefik v3 + NetBird services with pinned versions
 │   ├── .env.template      # Environment variables template
 │   └── management.json.template # NetBird management & OIDC config template

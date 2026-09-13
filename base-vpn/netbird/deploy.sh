@@ -31,7 +31,11 @@ if [ -d /opt/dpi ] && [ ! -d "$NETBIRD_DIR" ]; then
   sudo mv /opt/dpi "$NETBIRD_DIR"
 fi
 
-mkdir -p "$NETBIRD_DIR/traefik" "$NETBIRD_DIR/data" "$NETBIRD_DIR/scripts"
+mkdir -p "$NETBIRD_DIR/traefik" "$NETBIRD_DIR/data"
+# Clean up legacy scripts directory if present
+if [ -d "$NETBIRD_DIR/scripts" ]; then
+  sudo rm -rf "$NETBIRD_DIR/scripts"
+fi
 
 # 1. Move uploaded files from /tmp to /opt/netbird
 echo -e "\n${BOLD}--- [1/6] Syncing Application Manifests ---${NC}"
@@ -51,9 +55,9 @@ if [ -f /tmp/.env.template ]; then
 fi
 
 if [ -f /tmp/backup_to_gcs.sh ]; then
-  log_cmd "mv /tmp/backup_to_gcs.sh $NETBIRD_DIR/scripts/backup_to_gcs.sh"
-  sudo mv /tmp/backup_to_gcs.sh "$NETBIRD_DIR/scripts/backup_to_gcs.sh"
-  sudo chmod +x "$NETBIRD_DIR/scripts/backup_to_gcs.sh"
+  log_cmd "mv /tmp/backup_to_gcs.sh $NETBIRD_DIR/backup_to_gcs.sh"
+  sudo mv /tmp/backup_to_gcs.sh "$NETBIRD_DIR/backup_to_gcs.sh"
+  sudo chmod +x "$NETBIRD_DIR/backup_to_gcs.sh"
 fi
 
 # Clean up any leftover staging files in /tmp so no ext_* artifacts remain
@@ -109,7 +113,7 @@ fi
 sudo usermod -aG docker ubuntu 2>/dev/null || true
 
 # Ensure 6-hourly backup cron is configured for root
-(sudo crontab -l 2>/dev/null | grep -v 'backup_to_gcs.sh' || true; echo "0 */6 * * * $NETBIRD_DIR/scripts/backup_to_gcs.sh >/dev/null 2>&1") | sudo crontab -
+(sudo crontab -l 2>/dev/null | grep -v 'backup_to_gcs.sh' || true; echo "0 */6 * * * $NETBIRD_DIR/backup_to_gcs.sh >/dev/null 2>&1") | sudo crontab -
 
 # 3. Fetch Secrets from Secret Manager via VM Attached Service Account
 echo -e "\n${BOLD}--- [3/6] Resolving Secrets from GCP Secret Manager ---${NC}"
@@ -193,7 +197,7 @@ fi
 
 # Ensure compose file and scripts are readable/executable
 sudo chmod 644 "$NETBIRD_DIR/docker-compose.yml" 2>/dev/null || true
-sudo chmod 755 "$NETBIRD_DIR/deploy.sh" "$NETBIRD_DIR/scripts/backup_to_gcs.sh" 2>/dev/null || true
+sudo chmod 755 "$NETBIRD_DIR/deploy.sh" "$NETBIRD_DIR/backup_to_gcs.sh" 2>/dev/null || true
 
 log_info "Permissions configured: owned by 'ubuntu:docker', secrets mode 0600, acme.json mode 0600 root."
 
@@ -235,7 +239,7 @@ sudo docker compose ps
 
 # Snapshot current state to GCS
 echo -e "\n${BOLD}--- Synchronizing State Snapshot to GCS ---${NC}"
-if [ -f "$NETBIRD_DIR/scripts/backup_to_gcs.sh" ]; then
-  log_cmd "sudo $NETBIRD_DIR/scripts/backup_to_gcs.sh"
-  sudo "$NETBIRD_DIR/scripts/backup_to_gcs.sh" || true
+if [ -f "$NETBIRD_DIR/backup_to_gcs.sh" ]; then
+  log_cmd "sudo $NETBIRD_DIR/backup_to_gcs.sh"
+  sudo "$NETBIRD_DIR/backup_to_gcs.sh" || true
 fi

@@ -6,16 +6,17 @@
 # TLS certificates, and securely synchronizes them to GCS.
 #
 # Executed via:
-#   - 6-hourly cron: 0 */6 * * * /opt/netbird/scripts/backup_to_gcs.sh
+#   - 6-hourly cron: 0 */6 * * * /opt/netbird/backup_to_gcs.sh
 #   - VM graceful shutdown: ExecStopPost in /etc/systemd/system/dpi-vpn.service
-#   - Manual execution: sudo /opt/netbird/scripts/backup_to_gcs.sh
+#   - Manual execution: sudo /opt/netbird/backup_to_gcs.sh
 # ==============================================================================
 set -euo pipefail
 
 # Ensure standard system utilities and cloud CLI tools are in PATH for crontab execution
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:${PATH:-}"
 
-NETBIRD_DIR="${NETBIRD_DIR:-/opt/netbird}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NETBIRD_DIR="${NETBIRD_DIR:-$SCRIPT_DIR}"
 
 # Single Source of Truth: load configuration from .env / .env.template
 if [ -f "$NETBIRD_DIR/.env" ]; then

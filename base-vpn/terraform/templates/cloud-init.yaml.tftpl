@@ -22,7 +22,7 @@ write_files:
     permissions: '0600'
     content: ''
 
-  - path: /opt/netbird/scripts/backup_to_gcs.sh
+  - path: /opt/netbird/backup_to_gcs.sh
     permissions: '0755'
     content: |
       #!/usr/bin/env bash
@@ -48,7 +48,7 @@ write_files:
       WorkingDirectory=/opt/netbird
       ExecStart=/usr/bin/docker compose up -d --remove-orphans
       ExecStop=/usr/bin/docker compose down
-      ExecStopPost=/opt/netbird/scripts/backup_to_gcs.sh
+      ExecStopPost=/opt/netbird/backup_to_gcs.sh
       TimeoutStartSec=300
 
       [Install]
@@ -64,7 +64,7 @@ runcmd:
   - echo "127.0.0.1 ${netbird_fqdn}" >> /etc/hosts
 
   # 3. Create required directory tree
-  - mkdir -p /opt/netbird/data /opt/netbird/traefik /opt/netbird/scripts
+  - mkdir -p /opt/netbird/data /opt/netbird/traefik
   - chmod 600 /opt/netbird/traefik/acme.json
 
   # 4. Restore NetBird SQLite Database from GCS if exists
@@ -81,4 +81,4 @@ runcmd:
   - systemctl enable dpi-vpn.service
 
   # 6. Install 6-hourly backup cron
-  - (crontab -l 2>/dev/null | grep -v 'backup_to_gcs.sh' || true; echo "0 */6 * * * /opt/netbird/scripts/backup_to_gcs.sh >/dev/null 2>&1") | crontab -
+  - (crontab -l 2>/dev/null | grep -v 'backup_to_gcs.sh' || true; echo "0 */6 * * * /opt/netbird/backup_to_gcs.sh >/dev/null 2>&1") | crontab -
