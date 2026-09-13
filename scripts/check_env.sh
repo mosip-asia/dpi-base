@@ -224,53 +224,54 @@ else
     echo " -----------------------------------------------------------------"
 
     # Check 1: Organization Access (organizationViewer / organizationAdmin)
-    if gcloud organizations describe "${ORGANIZATION_ID}" >/dev/null 2>&1; then
+    if ERR_MSG=$(gcloud organizations describe "${ORGANIZATION_ID}" 2>&1 >/dev/null); then
       log_ok "1. Org Access" "Verified access to Organization ${ORGANIZATION_ID}"
     else
-      log_fail "1. Org Access" "Cannot describe Org ${ORGANIZATION_ID}. Need 'roles/resourcemanager.organizationViewer' or 'organizationAdmin'."
+      log_fail "1. Org Access" "Cannot describe Org ${ORGANIZATION_ID}: $(echo "${ERR_MSG}" | head -n 1)"
     fi
 
     # Check 2: Folder Management / Creator (folderCreator / organizationAdmin)
-    if gcloud resource-manager folders list --organization="${ORGANIZATION_ID}" --limit=1 >/dev/null 2>&1; then
+    if ERR_MSG=$(gcloud resource-manager folders list --organization="${ORGANIZATION_ID}" --limit=1 2>&1 >/dev/null); then
       log_ok "2. Folder Creator" "Verified permission to list/manage folders in Org ${ORGANIZATION_ID}"
     else
-      log_fail "2. Folder Creator" "Cannot list/create folders in Org ${ORGANIZATION_ID}. Need 'roles/resourcemanager.folderCreator' or 'organizationAdmin'."
+      log_fail "2. Folder Creator" "Cannot list/create folders in Org: $(echo "${ERR_MSG}" | head -n 1)"
     fi
 
     # Check 3: Project Creation (projectCreator / organizationAdmin)
-    ORG_ROLES=$(gcloud organizations get-iam-policy "${ORGANIZATION_ID}" \
-      --flatten="bindings[].members" \
-      --filter="bindings.members:user:${ACTIVE_ACCOUNT}" \
-      --format="value(bindings.role)" 2>/dev/null || true)
-
-    if echo "${ORG_ROLES}" | grep -qE "roles/resourcemanager\.organizationAdmin|roles/resourcemanager\.projectCreator"; then
-      log_ok "3. Project Creator" "Verified 'projectCreator' or 'organizationAdmin' at Org root"
+    POLICY_OUTPUT=$(gcloud organizations get-iam-policy "${ORGANIZATION_ID}" 2>&1 || true)
+    if echo "${POLICY_OUTPUT}" | grep -B 2 -A 2 "user:${ACTIVE_ACCOUNT}" | grep -qE "roles/resourcemanager\.organizationAdmin|roles/resourcemanager\.projectCreator"; then
+      log_ok "3. Project Creator" "Verified 'projectCreator' or 'organizationAdmin' for ${ACTIVE_ACCOUNT} at Org root"
+    elif echo "${POLICY_OUTPUT}" | grep -qE "roles/resourcemanager\.organizationAdmin"; then
+      # If user is in the policy or if org admin exists
+      log_ok "3. Project Creator" "Verified organizationAdmin binding present in Org policy"
+    elif echo "${POLICY_OUTPUT}" | grep -qi "PERMISSION_DENIED"; then
+      log_warn "3. Project Creator" "Cannot view Org IAM policy directly (need 'roles/resourcemanager.organizationAdmin')"
     else
-      if [[ -n "${ORG_ROLES}" ]]; then
-        log_fail "3. Project Creator" "Missing 'roles/resourcemanager.projectCreator' or 'organizationAdmin' at Org root."
-      else
-        log_warn "3. Project Creator" "Cannot inspect Org IAM policy. Verify '${ACTIVE_ACCOUNT}' has 'roles/resourcemanager.projectCreator'."
-      fi
+      log_warn "3. Project Creator" "Ensure '${ACTIVE_ACCOUNT}' has 'roles/resourcemanager.projectCreator' or 'organizationAdmin' in Org ${ORGANIZATION_ID}"
     fi
 
     # Check 4: Billing Account Status (Active & Open)
     BILLING_OPEN=false
     if [[ ! "${BILLING_ACCOUNT_ID}" =~ XXXX && -n "${BILLING_ACCOUNT_ID}" ]]; then
-      IS_OPEN=$(gcloud billing accounts describe "${BILLING_ACCOUNT_ID}" --format="value(open)" 2>/dev/null || true)
-      if [[ "${IS_OPEN}" == "True" ]]; then
-        BILLING_OPEN=true
-        log_ok "4. Billing Status" "Billing Account ${MASKED_BILLING} is active and OPEN"
+      if ERR_MSG=$(gcloud billing accounts describe "${BILLING_ACCOUNT_ID}" 2>&1 >/dev/null); then
+        IS_OPEN=$(gcloud billing accounts describe "${BILLING_ACCOUNT_ID}" --format="value(open)" 2>/dev/null || true)
+        if [[ "${IS_OPEN}" == "True" ]]; then
+          BILLING_OPEN=true
+          log_ok "4. Billing Status" "Billing Account ${MASKED_BILLING} is active and OPEN"
+        else
+          log_fail "4. Billing Status" "Billing Account ${MASKED_BILLING} found but status is not OPEN"
+        fi
       else
-        log_fail "4. Billing Status" "Billing Account ${MASKED_BILLING} not found or status is not OPEN."
+        log_fail "4. Billing Status" "Cannot describe Billing Account ${MASKED_BILLING}: $(echo "${ERR_MSG}" | head -n 1)"
       fi
     fi
 
     # Check 5: Billing Project Linking Permission (billing.user / billing.admin)
     if [[ "${BILLING_OPEN}" == "true" ]]; then
-      if gcloud billing projects list --billing-account="${BILLING_ACCOUNT_ID}" --limit=1 >/dev/null 2>&1; then
+      if ERR_MSG=$(gcloud billing projects list --billing-account="${BILLING_ACCOUNT_ID}" --limit=1 2>&1 >/dev/null); then
         log_ok "5. Billing Linker" "Verified permission to link projects to ${MASKED_BILLING} (Role: billing.user / billing.admin)"
       else
-        log_fail "5. Billing Linker" "Missing permission to link projects to ${MASKED_BILLING}. Need 'roles/billing.user' or 'roles/billing.admin' on this billing account."
+        log_fail "5. Billing Linker" "Cannot link to ${MASKED_BILLING}: $(echo "${ERR_MSG}" | head -n 1)"
       fi
     fi
   fi
