@@ -52,3 +52,13 @@ variable "state_bucket" {
   default     = "base-dpi-ait-ac-th-tfstate"
 }
 
+variable "admin_users" {
+  type        = list(string)
+  description = "Administrator user emails granted OS Admin Login and IAP Tunneling on base-vpn"
+  default = [
+    "akraradet@ait.asia",
+    "nuttasit@ait.asia",
+  ]
+}
+
+

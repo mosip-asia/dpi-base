@@ -42,6 +42,26 @@ resource "google_secret_manager_secret_iam_member" "oauth_client_secret_accessor
   member    = "serviceAccount:${google_service_account.vpn_sa.email}"
 }
 
+# ==========================================================
+# 👥 Operator Project-Level IAM (OS Login & IAP Tunneling)
+# ==========================================================
+resource "google_project_iam_member" "operator_os_admin" {
+  for_each = toset(var.admin_users)
+
+  project = var.project_id
+  role    = "roles/compute.osAdminLogin"
+  member  = startswith(each.value, "user:") ? each.value : "user:${each.value}"
+}
+
+resource "google_project_iam_member" "operator_iap_tunnel" {
+  for_each = toset(var.admin_users)
+
+  project = var.project_id
+  role    = "roles/iap.tunnelResourceAccessor"
+  member  = startswith(each.value, "user:") ? each.value : "user:${each.value}"
+}
+
+
 
 # ==========================================================
 # 📄 Template Rendering (OS Level Only)
