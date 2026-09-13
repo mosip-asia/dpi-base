@@ -1,8 +1,7 @@
 # DPI Center Base (`dpi-base`) — Current Situation & Status
 
-**Last Updated**: 2026-09-13  
-**Active Git Branch**: `feat/issue-4-vpn`  
-**Linked Pull Request**: [PR #7: feat(vpn): [Phase 2] Deploy base-vpn infrastructure & NetBird Mesh VPN (Draft)](https://github.com/mosip-asia/dpi-base/pull/7)  
+**Last Updated**: 2026-09-14  
+**Active Git Branch**: `main`  
 **Target Organization**: `dpi.ait.ac.th` (Org ID: `350922776586`)  
 
 ---
@@ -124,11 +123,8 @@
 
 ## 🎯 Immediate Next Actions
 
-1. **Initial Admin Login**:
-   - Open [`https://netbird.base.dpi.ait.ac.th`](https://netbird.base.dpi.ait.ac.th) and authenticate with your `@dpi.ait.ac.th` or `@ait.asia` Google account.
-2. **Merge Pull Request #7**:
-   - Mark Draft PR #7 as Ready for Review (`gh pr ready`) and merge `feat/issue-4-vpn` into `main` (Resolves Issue #4).
-3. **Configure Optional Production CNAME**:
-   - Point `netbird.dpi.ait.ac.th` $\rightarrow$ `netbird.base.dpi.ait.ac.th` in `ait-brainlab-mgmt` when ready.
-4. **Kick off Phase 3 (`base-kube-ops`)**:
-   - Create branch `feat/issue-5-kube-ops` (linked to Issue #5) for Rancher & VictoriaMetrics / Loki observability plane.
+1. **Kick off Phase 3 (`base-kube-ops`)**:
+   - Work with `@BossNP` on branch `feat/issue-5-kube-ops` (linked to [Issue #5](https://github.com/mosip-asia/dpi-base/issues/5)) for Rancher & VictoriaMetrics / Loki observability plane.
+2. **Review & Prioritize Proposals (Unconfirmed)**:
+   - [Issue #10](https://github.com/mosip-asia/dpi-base/issues/10): `[GitOps] Configure Terraform Service Account (base-mgmt-terraform) & Workload Identity Federation for base Domain` (`status: unconfirmed`)
+   - [Issue #11](https://github.com/mosip-asia/dpi-base/issues/11): `[Platform] Design and Publish "domain-template" Repository for Sovereign Domain Onboarding` (`status: unconfirmed`)
