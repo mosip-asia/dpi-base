@@ -14,7 +14,7 @@
 │                           DPI CENTER ROADMAP OVERVIEW                           │
 └─────────────────────────────────────────────────────────────────────────────────┘
   Phase 0: Cloud Organization & Identity Foundation      [🟢 COMPLETED]
-  Phase 1: Foundation Management Plane (base-mgmt)       [🟡 READY TO APPLY]
+  Phase 1: Foundation Management Plane (base-mgmt)       [🟢 DEPLOYED]
   Phase 2: Network Fabric Tier (base-vpn / NetBird)      [🔴 PLANNED]
   Phase 3: Multi-Cluster Control Plane (dpi-kube-ops)    [🔴 PLANNED]
   Phase 4: Sovereign Workload Initiatives (MOSIP, DLMS)  [🔴 PLANNED]
@@ -52,8 +52,8 @@
 | `1.6` | Pre-flight Environment Validator | `scripts/check_env.sh` | 🟢 Verified | Validates syntax, placeholders, and live GCP auth |
 | `1.7` | Domain Seed Bootstrap Script | `scripts/bootstrap_domain.sh`| 🟢 Verified | Supports `--plan`, idempotent apply, auto-detects paths |
 | `1.8` | Root `.env` & `.env.example` Workflow | Root `.env.example` | 🟢 Verified | Sanitized, gitignored, public billing privacy enforced |
-| `1.9` | Deploy GitOps Foundation via Terraform | Project `base-mgmt` | 🟡 Ready | `terraform plan` clean (15 to add: DNS zone, lien, CI/CD SA) |
-| `1.10`| Authoritative Parent DNS Delegation Handshake | `ait-brainlab-mgmt` | 🔴 Pending | Awaiting `terraform apply` output for `base.dpi.ait.ac.th.` NS |
+| `1.9` | Deploy GitOps Foundation via Terraform | Project `base-mgmt` | 🟢 Verified | 13 resources deployed (DNS zone, lien, Secret Manager, Folder IAM) |
+| `1.10`| Authoritative Parent DNS Delegation Handshake | `ait-brainlab-mgmt` | 🟡 Ready | Nameservers: `ns-cloud-e1..e4.googledomains.com.` |
 
 ---
 
@@ -106,22 +106,24 @@
 | **Foundation Project** | `base-mgmt` (`892879827967`) | Folder `base` | Active |
 | **State Storage Bucket** | `gs://base-dpi-ait-ac-th-tfstate` | `base-mgmt` (`asia-southeast1`) | Active (Versioning ON) |
 | **Parent Authoritative DNS** | Zone `dpi-center` (Shard A) | `ait-brainlab-mgmt` | Active (Delegated from `ait.ac.th`) |
-| **Foundation DNS Subzone** | `base.dpi.ait.ac.th.` | `base-mgmt` | Defined in Terraform (Ready to apply) |
+| **Foundation DNS Subzone** | `base.dpi.ait.ac.th.` (Shard E) | `base-mgmt` | Active (`ns-cloud-e1..e4`) |
 
 ---
 
 ## 🎯 Immediate Next Actions
 
-1. **Apply Foundation Terraform**:
+1. **Perform Parent DNS Delegation Handshake**:
+   - Zone `dpi-center` in project `ait-brainlab-mgmt`.
+   - Add `NS` record for `base.dpi.ait.ac.th.` with nameservers:
+     * `ns-cloud-e1.googledomains.com.`
+     * `ns-cloud-e2.googledomains.com.`
+     * `ns-cloud-e3.googledomains.com.`
+     * `ns-cloud-e4.googledomains.com.`
+2. **Verify Public DNS Resolution**:
    ```bash
-   cd base-mgmt/terraform
-   terraform init
-   terraform apply
+   dig NS base.dpi.ait.ac.th +short
    ```
-2. **Perform Parent DNS Delegation**:
-   - Capture nameservers from `terraform output name_servers`.
-   - Add the 4 nameservers as an `NS` record for `base.dpi.ait.ac.th.` in project `ait-brainlab-mgmt` (Zone: `dpi-center`).
 3. **Merge Pull Request #6**:
-   - Merge `feat/issue-3-foundation` into `main` once `terraform apply` and DNS validation pass.
+   - Merge `feat/issue-3-foundation` into `main`.
 4. **Kick off Phase 2 (`base-vpn`)**:
    - Create branch `feat/issue-4-vpn` and begin NetBird mesh VPN deployment.
