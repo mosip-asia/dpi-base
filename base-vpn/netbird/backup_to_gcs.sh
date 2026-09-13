@@ -12,8 +12,22 @@
 # ==============================================================================
 set -euo pipefail
 
-NETBIRD_DIR="/opt/netbird"
-STATE_BUCKET="base-dpi-ait-ac-th-tfstate"
+NETBIRD_DIR="${NETBIRD_DIR:-/opt/netbird}"
+
+# Single Source of Truth: load configuration from .env / .env.template
+if [ -f "$NETBIRD_DIR/.env" ]; then
+  # shellcheck disable=SC1090
+  set -a
+  source "$NETBIRD_DIR/.env"
+  set +a
+elif [ -f "$NETBIRD_DIR/.env.template" ]; then
+  # shellcheck disable=SC1090
+  set -a
+  source "$NETBIRD_DIR/.env.template"
+  set +a
+fi
+
+STATE_BUCKET="${STATE_BUCKET:-base-dpi-ait-ac-th-tfstate}"
 BACKUP_PREFIX="gs://${STATE_BUCKET}/backups/netbird"
 
 echo "==> 💾 Starting NetBird backup to ${BACKUP_PREFIX}..."

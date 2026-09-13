@@ -39,8 +39,12 @@ log_info() {
 VPN_PROJECT="base-vpn"
 VM_NAME="base-vpn-vm"
 ZONE="asia-southeast1-b"
-REMOTE_DIR="/opt/netbird"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REMOTE_DIR="${REMOTE_DIR:-/opt/netbird}"
+if [ -f "$SCRIPT_DIR/netbird/.env.template" ]; then
+  TEMPLATE_DIR=$(grep '^NETBIRD_DIR=' "$SCRIPT_DIR/netbird/.env.template" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+  [ -n "$TEMPLATE_DIR" ] && REMOTE_DIR="$TEMPLATE_DIR"
+fi
 
 log_step "📦 [1/2] Uploading Stack Manifests to VM via IAP..."
 

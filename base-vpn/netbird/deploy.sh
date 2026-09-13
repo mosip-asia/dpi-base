@@ -23,44 +23,81 @@ log_info() { echo -e "${GREEN}✔ [VM]${NC} $1"; }
 log_cmd()  { echo -e "${CYAN}▶ [VM RUN]${NC} ${DIM}$1${NC}"; }
 log_warn() { echo -e "${YELLOW}⚠ [VM WARN]${NC} $1"; }
 
-SERVICE_DIR="/opt/netbird"
-MGMT_PROJECT="base-mgmt"
-NETBIRD_FQDN="netbird.base.dpi.ait.ac.th"
-PROD_FQDN="netbird.dpi.ait.ac.th"
-ACME_EMAIL="admin@dpi.ait.ac.th"
-SINGLE_ACCOUNT_MODE_DOMAIN="dpi.ait.ac.th"
+NETBIRD_DIR="${NETBIRD_DIR:-/opt/netbird}"
 
 # 0. Seamless migration from legacy /opt/dpi path if present
-if [ -d /opt/dpi ] && [ ! -d "$SERVICE_DIR" ]; then
-  log_info "Migrating legacy /opt/dpi to $SERVICE_DIR..."
-  sudo mv /opt/dpi "$SERVICE_DIR"
+if [ -d /opt/dpi ] && [ ! -d "$NETBIRD_DIR" ]; then
+  log_info "Migrating legacy /opt/dpi to $NETBIRD_DIR..."
+  sudo mv /opt/dpi "$NETBIRD_DIR"
 fi
 
-mkdir -p "$SERVICE_DIR/traefik" "$SERVICE_DIR/data" "$SERVICE_DIR/scripts"
+mkdir -p "$NETBIRD_DIR/traefik" "$NETBIRD_DIR/data" "$NETBIRD_DIR/scripts"
+
+# 1. Move uploaded files from /tmp to /opt/netbird
+echo -e "\n${BOLD}--- [1/6] Syncing Application Manifests ---${NC}"
+if [ -f /tmp/docker-compose.yml ]; then
+  log_cmd "mv /tmp/docker-compose.yml $NETBIRD_DIR/docker-compose.yml"
+  sudo mv /tmp/docker-compose.yml "$NETBIRD_DIR/docker-compose.yml"
+fi
+
+if [ -f /tmp/management.json.template ]; then
+  log_cmd "mv /tmp/management.json.template $NETBIRD_DIR/management.json.template"
+  sudo mv /tmp/management.json.template "$NETBIRD_DIR/management.json.template"
+fi
+
+if [ -f /tmp/.env.template ]; then
+  log_cmd "mv /tmp/.env.template $NETBIRD_DIR/.env.template"
+  sudo mv /tmp/.env.template "$NETBIRD_DIR/.env.template"
+fi
+
+if [ -f /tmp/backup_to_gcs.sh ]; then
+  log_cmd "mv /tmp/backup_to_gcs.sh $NETBIRD_DIR/scripts/backup_to_gcs.sh"
+  sudo mv /tmp/backup_to_gcs.sh "$NETBIRD_DIR/scripts/backup_to_gcs.sh"
+  sudo chmod +x "$NETBIRD_DIR/scripts/backup_to_gcs.sh"
+fi
+
+# 2. Load Configuration from .env / .env.template (Single Source of Truth)
+echo -e "\n${BOLD}--- [2/6] Loading Configuration & Restoring State ---${NC}"
+if [ -f "$NETBIRD_DIR/.env.template" ]; then
+  # shellcheck disable=SC1090
+  source "$NETBIRD_DIR/.env.template"
+fi
+
+if [ -f "$NETBIRD_DIR/.env" ]; then
+  # shellcheck disable=SC1090
+  source "$NETBIRD_DIR/.env"
+fi
+
+MGMT_PROJECT="${MGMT_PROJECT:-base-mgmt}"
+STATE_BUCKET="${STATE_BUCKET:-base-dpi-ait-ac-th-tfstate}"
+NETBIRD_FQDN="${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}"
+PROD_FQDN="${PROD_FQDN:-netbird.dpi.ait.ac.th}"
+ACME_EMAIL="${ACME_EMAIL:-admin@dpi.ait.ac.th}"
+SINGLE_ACCOUNT_MODE_DOMAIN="${SINGLE_ACCOUNT_MODE_DOMAIN:-dpi.ait.ac.th}"
 
 # Ensure acme.json is a regular file with 0600 permissions (not a directory)
-if [ -d "$SERVICE_DIR/traefik/acme.json" ]; then
+if [ -d "$NETBIRD_DIR/traefik/acme.json" ]; then
   log_warn "acme.json was created as a directory. Recreating as a secure 0600 file..."
-  sudo rm -rf "$SERVICE_DIR/traefik/acme.json"
+  sudo rm -rf "$NETBIRD_DIR/traefik/acme.json"
 fi
-if [ ! -f "$SERVICE_DIR/traefik/acme.json" ]; then
-  sudo touch "$SERVICE_DIR/traefik/acme.json"
+if [ ! -f "$NETBIRD_DIR/traefik/acme.json" ]; then
+  sudo touch "$NETBIRD_DIR/traefik/acme.json"
 fi
-sudo chmod 600 "$SERVICE_DIR/traefik/acme.json"
+sudo chmod 600 "$NETBIRD_DIR/traefik/acme.json"
 
 # Restore NetBird SQLite Database from GCS if it exists and local store is missing
-if [ ! -f "$SERVICE_DIR/data/store.db" ]; then
+if [ ! -f "$NETBIRD_DIR/data/store.db" ]; then
   log_info "Checking GCS for existing NetBird database snapshot..."
-  if gcloud storage cp "gs://base-dpi-ait-ac-th-tfstate/backups/netbird/store.db" "$SERVICE_DIR/data/store.db" 2>/dev/null; then
-    sudo chmod 600 "$SERVICE_DIR/data/store.db"
+  if gcloud storage cp "gs://${STATE_BUCKET}/backups/netbird/store.db" "$NETBIRD_DIR/data/store.db" 2>/dev/null; then
+    sudo chmod 600 "$NETBIRD_DIR/data/store.db"
     log_info "Restored NetBird store.db from GCS."
   fi
 fi
 
 # Restore Traefik acme.json from GCS if local file is empty
-if [ ! -s "$SERVICE_DIR/traefik/acme.json" ]; then
-  if gcloud storage cp "gs://base-dpi-ait-ac-th-tfstate/backups/netbird/acme.json" "$SERVICE_DIR/traefik/acme.json" 2>/dev/null; then
-    sudo chmod 600 "$SERVICE_DIR/traefik/acme.json"
+if [ ! -s "$NETBIRD_DIR/traefik/acme.json" ]; then
+  if gcloud storage cp "gs://${STATE_BUCKET}/backups/netbird/acme.json" "$NETBIRD_DIR/traefik/acme.json" 2>/dev/null; then
+    sudo chmod 600 "$NETBIRD_DIR/traefik/acme.json"
     log_info "Restored Traefik acme.json certificates from GCS."
   fi
 fi
@@ -68,34 +105,11 @@ fi
 # Ensure ubuntu system user has docker group permissions
 sudo usermod -aG docker ubuntu 2>/dev/null || true
 
-# 1. Move uploaded files from /tmp to /opt/netbird
-echo -e "\n${BOLD}--- [1/5] Syncing Application Manifests ---${NC}"
-if [ -f /tmp/docker-compose.yml ]; then
-  log_cmd "mv /tmp/docker-compose.yml $SERVICE_DIR/docker-compose.yml"
-  sudo mv /tmp/docker-compose.yml "$SERVICE_DIR/docker-compose.yml"
-fi
-
-if [ -f /tmp/management.json.template ]; then
-  log_cmd "mv /tmp/management.json.template $SERVICE_DIR/management.json.template"
-  sudo mv /tmp/management.json.template "$SERVICE_DIR/management.json.template"
-fi
-
-if [ -f /tmp/.env.template ]; then
-  log_cmd "mv /tmp/.env.template $SERVICE_DIR/.env.template"
-  sudo mv /tmp/.env.template "$SERVICE_DIR/.env.template"
-fi
-
-if [ -f /tmp/backup_to_gcs.sh ]; then
-  log_cmd "mv /tmp/backup_to_gcs.sh $SERVICE_DIR/scripts/backup_to_gcs.sh"
-  sudo mv /tmp/backup_to_gcs.sh "$SERVICE_DIR/scripts/backup_to_gcs.sh"
-  sudo chmod +x "$SERVICE_DIR/scripts/backup_to_gcs.sh"
-fi
-
 # Ensure 6-hourly backup cron is configured for root
-(sudo crontab -l 2>/dev/null | grep -v 'backup_to_gcs.sh' || true; echo "0 */6 * * * $SERVICE_DIR/scripts/backup_to_gcs.sh >/dev/null 2>&1") | sudo crontab -
+(sudo crontab -l 2>/dev/null | grep -v 'backup_to_gcs.sh' || true; echo "0 */6 * * * $NETBIRD_DIR/scripts/backup_to_gcs.sh >/dev/null 2>&1") | sudo crontab -
 
-# 2. Fetch Secrets from Secret Manager via VM Attached Service Account
-echo -e "\n${BOLD}--- [2/5] Resolving Secrets from GCP Secret Manager ---${NC}"
+# 3. Fetch Secrets from Secret Manager via VM Attached Service Account
+echo -e "\n${BOLD}--- [3/6] Resolving Secrets from GCP Secret Manager ---${NC}"
 log_info "Fetching Google OAuth Client ID & Secret from project '$MGMT_PROJECT'..."
 
 OAUTH_CLIENT_ID=$(gcloud secrets versions access latest --secret=google-oauth-client-id --project="$MGMT_PROJECT" 2>/dev/null || echo "PLACEHOLDER_CLIENT_ID.apps.googleusercontent.com")
@@ -113,61 +127,64 @@ else
 fi
 
 # Relay Secret (keep existing or generate a secure 64-char token)
-EXISTING_RELAY_SECRET=$(grep '^NETBIRD_RELAY_SECRET=' "$SERVICE_DIR/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '"' || true)
-if [[ -n "$EXISTING_RELAY_SECRET" ]]; then
-  RELAY_SECRET="$EXISTING_RELAY_SECRET"
+RELAY_SECRET="${NETBIRD_RELAY_SECRET:-}"
+if [[ -z "$RELAY_SECRET" && -f "$NETBIRD_DIR/.env" ]]; then
+  RELAY_SECRET=$(grep '^NETBIRD_RELAY_SECRET=' "$NETBIRD_DIR/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '"' || true)
+fi
+
+if [[ -n "$RELAY_SECRET" ]]; then
   log_info "Preserving existing NetBird Relay Secret."
 else
   RELAY_SECRET=$(openssl rand -hex 32)
   log_info "Generated new 64-character NetBird Relay Secret."
 fi
 
-# 3. Render Configuration Files (.env and management.json)
-echo -e "\n${BOLD}--- [3/5] Rendering Configuration Files (.env & management.json) ---${NC}"
-if [ -f "$SERVICE_DIR/.env.template" ]; then
-  log_cmd "Rendering $SERVICE_DIR/.env from template on VM"
-  sed -e "s|\$NETBIRD_FQDN|$NETBIRD_FQDN|g" \
-      -e "s|\$PROD_FQDN|$PROD_FQDN|g" \
-      -e "s|\$ACME_EMAIL|$ACME_EMAIL|g" \
-      -e "s|\$GOOGLE_OAUTH_CLIENT_ID|$OAUTH_CLIENT_ID|g" \
-      -e "s|\$GOOGLE_OAUTH_CLIENT_SECRET|$OAUTH_CLIENT_SECRET|g" \
-      -e "s|\$NETBIRD_RELAY_SECRET|$RELAY_SECRET|g" \
-      -e "s|\$SINGLE_ACCOUNT_MODE_DOMAIN|$SINGLE_ACCOUNT_MODE_DOMAIN|g" \
-      "$SERVICE_DIR/.env.template" | sudo tee "$SERVICE_DIR/.env" > /dev/null
-else
-  log_cmd "Writing $SERVICE_DIR/.env directly on VM"
-  cat << ENV_EOF | sudo tee "$SERVICE_DIR/.env" > /dev/null
+# 4. Render Configuration Files (.env and management.json)
+echo -e "\n${BOLD}--- [4/6] Rendering Configuration Files (.env & management.json) ---${NC}"
+log_cmd "Writing $NETBIRD_DIR/.env"
+cat << ENV_EOF | sudo tee "$NETBIRD_DIR/.env" > /dev/null
+# ==============================================================================
+# 📡 DPI Center — NetBird Mesh VPN Environment Configuration
+# ==============================================================================
+
+# Platform & Storage Paths
+NETBIRD_DIR="$NETBIRD_DIR"
+MGMT_PROJECT="$MGMT_PROJECT"
+STATE_BUCKET="$STATE_BUCKET"
+
+# Domains & ACME TLS Configuration
 NETBIRD_FQDN="$NETBIRD_FQDN"
 PROD_FQDN="$PROD_FQDN"
 ACME_EMAIL="$ACME_EMAIL"
+SINGLE_ACCOUNT_MODE_DOMAIN="$SINGLE_ACCOUNT_MODE_DOMAIN"
+
+# Dynamic Secrets
 GOOGLE_OAUTH_CLIENT_ID="$OAUTH_CLIENT_ID"
 GOOGLE_OAUTH_CLIENT_SECRET="$OAUTH_CLIENT_SECRET"
 NETBIRD_RELAY_SECRET="$RELAY_SECRET"
-SINGLE_ACCOUNT_MODE_DOMAIN="$SINGLE_ACCOUNT_MODE_DOMAIN"
 ENV_EOF
-fi
 
-if [ -f "$SERVICE_DIR/management.json.template" ]; then
-  log_cmd "Rendering $SERVICE_DIR/management.json from template"
+if [ -f "$NETBIRD_DIR/management.json.template" ]; then
+  log_cmd "Rendering $NETBIRD_DIR/management.json from template"
   sed -e "s|\$GOOGLE_OAUTH_CLIENT_ID|$OAUTH_CLIENT_ID|g" \
       -e "s|\$GOOGLE_OAUTH_CLIENT_SECRET|$OAUTH_CLIENT_SECRET|g" \
       -e "s|\$NETBIRD_RELAY_SECRET|$RELAY_SECRET|g" \
       -e "s|\$SINGLE_ACCOUNT_MODE_DOMAIN|$SINGLE_ACCOUNT_MODE_DOMAIN|g" \
       -e "s|\$NETBIRD_FQDN|$NETBIRD_FQDN|g" \
-      "$SERVICE_DIR/management.json.template" | sudo tee "$SERVICE_DIR/management.json" > /dev/null
+      "$NETBIRD_DIR/management.json.template" | sudo tee "$NETBIRD_DIR/management.json" > /dev/null
 fi
 
-log_cmd "chmod 600 $SERVICE_DIR/.env $SERVICE_DIR/management.json"
-sudo chmod 600 "$SERVICE_DIR/.env" "$SERVICE_DIR/management.json" 2>/dev/null || true
-if [ -f "$SERVICE_DIR/traefik/acme.json" ]; then
-  sudo chmod 600 "$SERVICE_DIR/traefik/acme.json" 2>/dev/null || true
+log_cmd "chmod 600 $NETBIRD_DIR/.env $NETBIRD_DIR/management.json"
+sudo chmod 600 "$NETBIRD_DIR/.env" "$NETBIRD_DIR/management.json" 2>/dev/null || true
+if [ -f "$NETBIRD_DIR/traefik/acme.json" ]; then
+  sudo chmod 600 "$NETBIRD_DIR/traefik/acme.json" 2>/dev/null || true
 fi
 log_cmd "chown root:root on all stack configs"
-sudo chown root:root "$SERVICE_DIR/docker-compose.yml" "$SERVICE_DIR/.env" "$SERVICE_DIR/management.json" "$SERVICE_DIR/deploy.sh" 2>/dev/null || true
+sudo chown root:root "$NETBIRD_DIR/docker-compose.yml" "$NETBIRD_DIR/.env" "$NETBIRD_DIR/management.json" "$NETBIRD_DIR/deploy.sh" 2>/dev/null || true
 log_info "Configuration rendered and permissions locked down (0600 root:root)."
 
-# 4. Swapfile Memory Protection (2GB swap for e2-micro 1GB RAM)
-echo -e "\n${BOLD}--- [4/5] Memory Protection (Swapfile Check) ---${NC}"
+# 5. Swapfile Memory Protection (2GB swap for e2-micro 1GB RAM)
+echo -e "\n${BOLD}--- [5/6] Memory Protection (Swapfile Check) ---${NC}"
 if ! swapon --show | grep -q '/swapfile'; then
   log_warn "Swap is not currently active. Configuring 2GB swapfile..."
   if [ ! -f /swapfile ]; then
@@ -187,9 +204,9 @@ else
   log_info "2GB swapfile is active."
 fi
 
-# 5. Container Lifecycle (Pull & Up)
-echo -e "\n${BOLD}--- [5/5] Container Lifecycle & Verification ---${NC}"
-cd "$SERVICE_DIR"
+# 6. Container Lifecycle & Verification
+echo -e "\n${BOLD}--- [6/6] Container Lifecycle & Verification ---${NC}"
+cd "$NETBIRD_DIR"
 
 log_info "Pulling latest container images..."
 log_cmd "sudo docker compose pull"
@@ -202,9 +219,9 @@ sudo docker compose up -d --remove-orphans
 echo -e "\n${BOLD}--- Service Health Status ---${NC}"
 sudo docker compose ps
 
-# 6. Snapshot current state to GCS
-echo -e "\n${BOLD}--- [6/6] Synchronizing State Snapshot to GCS ---${NC}"
-if [ -f "$SERVICE_DIR/scripts/backup_to_gcs.sh" ]; then
-  log_cmd "sudo $SERVICE_DIR/scripts/backup_to_gcs.sh"
-  sudo "$SERVICE_DIR/scripts/backup_to_gcs.sh" || true
+# Snapshot current state to GCS
+echo -e "\n${BOLD}--- Synchronizing State Snapshot to GCS ---${NC}"
+if [ -f "$NETBIRD_DIR/scripts/backup_to_gcs.sh" ]; then
+  log_cmd "sudo $NETBIRD_DIR/scripts/backup_to_gcs.sh"
+  sudo "$NETBIRD_DIR/scripts/backup_to_gcs.sh" || true
 fi
