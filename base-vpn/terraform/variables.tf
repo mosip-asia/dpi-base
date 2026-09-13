@@ -70,6 +70,12 @@ variable "netbird_version" {
   default     = "0.78.1"
 }
 
+variable "netbird_dashboard_version" {
+  type        = string
+  description = "Version tag for NetBird Dashboard UI (Docker Hub: netbirdio/dashboard)"
+  default     = "v2.92.0"
+}
+
 variable "single_account_mode_domain" {
   type        = string
   description = "Primary organizational domain for NetBird Single Account Mode"

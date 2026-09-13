@@ -1,9 +1,14 @@
+# ==========================================================
+# 📡 DPI Center — NetBird Mesh VPN & Traefik v3 Edge Proxy
+# ==========================================================
+# This file serves as the canonical stack specification and is
+# monitored by GitHub Dependabot (package-ecosystem: docker-compose)
+# for automated major version update alerts.
+# ==========================================================
+
 services:
-  # ==========================================================
-  # 🔒 Traefik v3: Edge Proxy & Automated Let's Encrypt SSL
-  # ==========================================================
   traefik:
-    image: traefik:${traefik_version}
+    image: traefik:v3.7
     container_name: traefik
     restart: unless-stopped
     environment:
@@ -15,11 +20,9 @@ services:
       - "--providers.docker.network=dpi-vpn-net"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      # Auto HTTP to HTTPS redirect
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      # Automated Let's Encrypt SSL
-      - "--certificatesresolvers.letsencrypt.acme.email=${acme_email}"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@dpi.ait.ac.th}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
@@ -34,21 +37,18 @@ services:
     networks:
       - vpn-network
 
-  # ==========================================================
-  # 📡 NetBird: Web Dashboard UI
-  # ==========================================================
   netbird-dashboard:
-    image: netbirdio/dashboard:${netbird_dashboard_version}
+    image: netbirdio/dashboard:v2.92.0
     container_name: netbird-dashboard
     restart: unless-stopped
     environment:
       - TZ=Asia/Bangkok
-      - NETBIRD_MGMT_API_ENDPOINT=https://${netbird_fqdn}
-      - NETBIRD_MGMT_GRPC_API_ENDPOINT=https://${netbird_fqdn}
+      - NETBIRD_MGMT_API_ENDPOINT=https://${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}
+      - NETBIRD_MGMT_GRPC_API_ENDPOINT=https://${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}
       - AUTH_AUTHORITY=https://accounts.google.com
-      - AUTH_CLIENT_ID=$${GOOGLE_OAUTH_CLIENT_ID}
-      - AUTH_CLIENT_SECRET=$${GOOGLE_OAUTH_CLIENT_SECRET}
-      - AUTH_AUDIENCE=$${GOOGLE_OAUTH_CLIENT_ID}
+      - AUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
+      - AUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}
+      - AUTH_AUDIENCE=${GOOGLE_OAUTH_CLIENT_ID}
       - AUTH_SUPPORTED_SCOPES=openid profile email
       - AUTH_REDIRECT_URI=/auth
       - AUTH_SILENT_REDIRECT_URI=/silent-auth
@@ -57,7 +57,7 @@ services:
       - USE_AUTH0=false
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.netbird-dashboard.rule=Host(`${netbird_fqdn}`)"
+      - "traefik.http.routers.netbird-dashboard.rule=Host(`${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}`)"
       - "traefik.http.routers.netbird-dashboard.entrypoints=websecure"
       - "traefik.http.routers.netbird-dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.netbird-dashboard.priority=1"
@@ -65,11 +65,8 @@ services:
     networks:
       - vpn-network
 
-  # ==========================================================
-  # 📡 NetBird: Self-Hosted WireGuard VPN Signal Service
-  # ==========================================================
   netbird-signal:
-    image: netbirdio/signal:${netbird_version}
+    image: netbirdio/signal:0.78.1
     container_name: netbird-signal
     restart: unless-stopped
     environment:
@@ -79,7 +76,7 @@ services:
       - "/etc/timezone:/etc/timezone:ro"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.netbird-signal.rule=Host(`${netbird_fqdn}`) && PathPrefix(`/signalexchange.SignalExchange/`)"
+      - "traefik.http.routers.netbird-signal.rule=Host(`${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}`) && PathPrefix(`/signalexchange.SignalExchange/`)"
       - "traefik.http.routers.netbird-signal.entrypoints=websecure"
       - "traefik.http.routers.netbird-signal.tls.certresolver=letsencrypt"
       - "traefik.http.routers.netbird-signal.priority=100"
@@ -89,11 +86,8 @@ services:
     networks:
       - vpn-network
 
-  # ==========================================================
-  # 📡 NetBird: Self-Hosted WireGuard Management Control Plane
-  # ==========================================================
   netbird-management:
-    image: netbirdio/management:${netbird_version}
+    image: netbirdio/management:0.78.1
     container_name: netbird-management
     restart: unless-stopped
     environment:
@@ -107,7 +101,7 @@ services:
       - "/etc/timezone:/etc/timezone:ro"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.netbird-mgmt.rule=Host(`${netbird_fqdn}`) && (PathPrefix(`/api`) || PathPrefix(`/management.`) || PathPrefix(`/.well-known`) || PathPrefix(`/oauth2`) || PathPrefix(`/dex`))"
+      - "traefik.http.routers.netbird-mgmt.rule=Host(`${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}`) && (PathPrefix(`/api`) || PathPrefix(`/management.`) || PathPrefix(`/.well-known`) || PathPrefix(`/oauth2`) || PathPrefix(`/dex`))"
       - "traefik.http.routers.netbird-mgmt.entrypoints=websecure"
       - "traefik.http.routers.netbird-mgmt.tls.certresolver=letsencrypt"
       - "traefik.http.routers.netbird-mgmt.priority=10"
@@ -116,22 +110,19 @@ services:
     networks:
       - vpn-network
 
-  # ==========================================================
-  # 📡 NetBird: Self-Hosted WireGuard Relay Service (WebSocket / TCP 443)
-  # ==========================================================
   netbird-relay:
-    image: netbirdio/relay:${netbird_version}
+    image: netbirdio/relay:0.78.1
     container_name: netbird-relay
     restart: unless-stopped
     command:
       - "relay"
       - "--listen-address=:33080"
-      - "--exposed-address=rels://${netbird_fqdn}:443/relay"
-      - "--auth-secret=$${NETBIRD_RELAY_SECRET}"
+      - "--exposed-address=rels://${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}:443/relay"
+      - "--auth-secret=${NETBIRD_RELAY_SECRET}"
       - "--log-level=info"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.netbird-relay.rule=Host(`${netbird_fqdn}`) && PathPrefix(`/relay`)"
+      - "traefik.http.routers.netbird-relay.rule=Host(`${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}`) && PathPrefix(`/relay`)"
       - "traefik.http.routers.netbird-relay.entrypoints=websecure"
       - "traefik.http.routers.netbird-relay.tls.certresolver=letsencrypt"
       - "traefik.http.services.netbird-relay.loadbalancer.server.port=33080"

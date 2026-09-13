@@ -43,9 +43,10 @@ locals {
 
   docker_compose_rendered = templatefile("${path.module}/templates/docker-compose.yml.tftpl", {
     netbird_fqdn    = local.netbird_fqdn
-    acme_email      = var.acme_email
-    traefik_version = var.traefik_version
-    netbird_version = var.netbird_version
+    acme_email                = var.acme_email
+    traefik_version           = var.traefik_version
+    netbird_version           = var.netbird_version
+    netbird_dashboard_version = var.netbird_dashboard_version
   })
 
   management_json_rendered = templatefile("${path.module}/templates/management.json.tftpl", {

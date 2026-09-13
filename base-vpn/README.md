@@ -69,11 +69,31 @@ terraform -chdir=base-vpn/terraform init
 terraform -chdir=base-vpn/terraform apply
 ```
 
-### 2. Inject Google OAuth Credentials
+### 2. Component Version Management
+Component versions can be customized in `base-vpn/terraform/terraform.tfvars`:
+```hcl
+# Traefik Edge Proxy version
+traefik_version = "v3.7"
+
+# NetBird Control Plane version (Management, Signal, Relay)
+netbird_version = "0.78.1"
+
+# NetBird Dashboard UI version
+netbird_dashboard_version = "v2.92.0"
+```
+
+### 3. Automated Major Version Alerts (Dependabot)
+GitHub Dependabot (`.github/dependabot.yml`) monitors the canonical stack in `base-vpn/docker/docker-compose.yml`.
+- Patch and minor updates are ignored to prevent noise.
+- Dependabot will automatically open a Pull Request when a **MAJOR** version of Traefik or NetBird is released.
+- When an alert arrives, adjust `terraform.tfvars` and run `terraform apply` to upgrade.
+
+### 4. Inject Google OAuth Credentials
 Once the OAuth Web Client ID and Secret are created in GCP Console (per [`oauth_setup.md`](../base-mgmt/oauth_setup.md)):
 ```bash
 ./base-vpn/update_oauth.sh "<CLIENT_ID>" "<CLIENT_SECRET>"
 ```
 This automatically saves credentials to Secret Manager and updates the running NetBird instance over secure IAP SSH without downtime or VM recreation.
+
 
 

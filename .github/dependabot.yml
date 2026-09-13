@@ -1,0 +1,65 @@
+# ==============================================================================
+# 🤖 GitHub Dependabot Configuration — DPI Center Base Platform
+# ==============================================================================
+# Configured to monitor infrastructure dependencies and container versions.
+# Per architecture guidelines, Traefik and NetBird are configured to alert
+# strictly on MAJOR version updates to prevent noisy patch/minor PRs.
+# ==============================================================================
+
+version: 2
+updates:
+  # ==========================================================
+  # 🐳 NetBird Mesh VPN & Traefik Edge Proxy (Major Updates)
+  # ==========================================================
+  - package-ecosystem: "docker-compose"
+    directory: "/base-vpn/docker"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "netbird"
+      - "major-update"
+    # Filter: Report strictly on MAJOR version bumps; ignore patch and minor updates
+    ignore:
+      - dependency-name: "traefik"
+        update-types:
+          - "version-update:semver-patch"
+          - "version-update:semver-minor"
+      - dependency-name: "netbirdio/*"
+        update-types:
+          - "version-update:semver-patch"
+          - "version-update:semver-minor"
+
+  # ==========================================================
+  # 🌍 Terraform Providers & Modules: base-mgmt
+  # ==========================================================
+  - package-ecosystem: "terraform"
+    directory: "/base-mgmt/terraform"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "terraform"
+
+  # ==========================================================
+  # 🌍 Terraform Providers & Modules: base-vpn
+  # ==========================================================
+  - package-ecosystem: "terraform"
+    directory: "/base-vpn/terraform"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "terraform"
