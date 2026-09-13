@@ -13,7 +13,7 @@ resource "google_project" "base_vpn" {
   name            = "DPI Base VPN - NetBird"
   project_id      = "base-vpn"
   folder_id       = var.folder_id
-  billing_account = var.billing_account_id
+  billing_account = local.billing_account_id
 }
 
 # 2. Enabled APIs for this Tier

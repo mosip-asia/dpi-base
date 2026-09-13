@@ -54,10 +54,19 @@ resource "google_secret_manager_secret" "billing_account_id" {
   depends_on = [google_project_service.secretmanager_api]
 }
 
-resource "google_secret_manager_secret_version" "billing_account_id_val" {
-  count       = var.billing_account_id != "" ? 1 : 0
-  secret      = google_secret_manager_secret.billing_account_id.id
-  secret_data = var.billing_account_id
+# --- Dynamic Billing Resolution: Direct from Secret Manager for Team & CI/CD ---
+# Child projects (prj-*.tf) read billing_account_id directly from Secret Manager,
+# so team members and CI/CD never need to know or store the billing account ID on disk.
+data "google_secret_manager_secret_version" "billing_account" {
+  project = var.project_id
+  secret  = google_secret_manager_secret.billing_account_id.secret_id
+  version = "latest"
 }
+
+locals {
+  billing_account_id = data.google_secret_manager_secret_version.billing_account.secret_data
+}
+
+
 
 

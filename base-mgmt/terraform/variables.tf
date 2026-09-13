@@ -39,9 +39,3 @@ variable "folder_members" {
   default     = []
 }
 
-variable "billing_account_id" {
-  type        = string
-  description = "Google Cloud Billing Account ID for projects in this domain"
-  default     = ""
-}
-

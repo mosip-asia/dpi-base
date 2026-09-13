@@ -101,7 +101,6 @@ project_id         = "base-mgmt"
 region             = "asia-southeast1"
 domain_name        = "base.dpi.ait.ac.th."
 folder_id          = "740224775327"
-billing_account_id = "${BILLING_ACCOUNT_ID}"
 
 # Team Collaborators (Folder IAM)
 folder_admins = [
@@ -111,6 +110,7 @@ folder_admins = [
 
 folder_members = []
 INNER_EOF
+
 
 echo -e " [OK] Synchronized: ${COLOR_GREEN}${TFVARS_FILE}${COLOR_RESET}"
 
