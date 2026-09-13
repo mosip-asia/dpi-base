@@ -234,7 +234,7 @@ echo ""
 echo "==> Step 2: Evaluating GCP Folder '${DOMAIN_NAME}' under Org ${ORGANIZATION_ID}..."
 EXISTING_FOLDER=$(gcloud resource-manager folders list \
   --organization="${ORGANIZATION_ID}" \
-  --filter="displayName='${DOMAIN_NAME}'" \
+  --filter="displayName='${DOMAIN_NAME}' AND lifecycleState=ACTIVE" \
   --format="value(name)" 2>/dev/null || true)
 
 FOLDER_FULL_ID=""
@@ -264,16 +264,26 @@ FOLDER_NUMERIC_ID="${FOLDER_FULL_ID#folders/}"
 # --- 5. Check / Plan / Create Anchor Management Project ---
 echo ""
 echo "==> Step 3: Evaluating Management Project '${PROJECT_ID}'..."
+PROJECT_STATE=$(gcloud projects describe "${PROJECT_ID}" --format="value(lifecycleState)" 2>/dev/null || true)
 PROJECT_EXISTS=false
-if gcloud projects describe "${PROJECT_ID}" >/dev/null 2>&1; then
-  PROJECT_EXISTS=true
-fi
 
-if [[ "${PROJECT_EXISTS}" == "true" ]]; then
+if [[ "${PROJECT_STATE}" == "ACTIVE" ]]; then
+  PROJECT_EXISTS=true
   if [[ "${PLAN_MODE}" == "true" ]]; then
-    plan_nochange "Project" "Already exists: ${PROJECT_ID}"
+    plan_nochange "Project" "Already exists and ACTIVE: ${PROJECT_ID}"
   else
-    echo -e "    ${COLOR_CYAN}[EXISTS]${COLOR_RESET} Project '${PROJECT_ID}' already exists."
+    echo -e "    ${COLOR_CYAN}[EXISTS]${COLOR_RESET} Project '${PROJECT_ID}' already exists and is ACTIVE."
+  fi
+elif [[ "${PROJECT_STATE}" == "DELETE_REQUESTED" ]]; then
+  if [[ "${PLAN_MODE}" == "true" ]]; then
+    plan_action "UNDELETE" "Project '${PROJECT_ID}' (currently in DELETE_REQUESTED state)"
+    PROJECT_EXISTS=true
+  else
+    echo -e "    ${COLOR_YELLOW}[RESTORING]${COLOR_RESET} Project '${PROJECT_ID}' is in DELETE_REQUESTED state. Undeleting..."
+    gcloud projects undelete "${PROJECT_ID}"
+    echo -e "    ${COLOR_GREEN}[RESTORED]${COLOR_RESET} Project '${PROJECT_ID}' successfully restored to ACTIVE."
+    PROJECT_EXISTS=true
+    sleep 3
   fi
 else
   if [[ "${PLAN_MODE}" == "true" ]]; then
