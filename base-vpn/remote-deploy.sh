@@ -6,7 +6,7 @@
 # them to the VM via IAP, and executes the VM-side deployer (/opt/dpi/deploy.sh).
 #
 # Usage:
-#   ./base-vpn/deploy.sh
+#   ./base-vpn/remote-deploy.sh
 # ==============================================================================
 set -euo pipefail
 

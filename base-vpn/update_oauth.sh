@@ -24,5 +24,5 @@ echo -n "$CLIENT_ID" | gcloud secrets versions add google-oauth-client-id --proj
 echo -n "$CLIENT_SECRET" | gcloud secrets versions add google-oauth-client-secret --project="$MGMT_PROJECT" --data-file=-
 
 echo "==> 🚀 [2/2] Re-deploying NetBird stack with updated credentials..."
-"$SCRIPT_DIR/deploy.sh"
+"$SCRIPT_DIR/remote-deploy.sh"
 

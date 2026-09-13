@@ -21,9 +21,10 @@
 ```text
 base-vpn/
 ├── README.md              # Architecture and operating runbook
-├── deploy.sh              # Zero-downtime deployer & stack updater
+├── remote-deploy.sh       # Zero-downtime deployer & stack updater (runs locally over IAP)
 ├── update_oauth.sh        # Helper script to inject Google OAuth credentials
 ├── docker/                # Canonical application stack (monitored by Dependabot)
+│   ├── deploy.sh          # VM-side service runner and compose manager (/opt/dpi/deploy.sh)
 │   ├── docker-compose.yml # Traefik v3 + NetBird services with pinned versions
 │   └── management.json.template # NetBird management & OIDC config template
 └── terraform/             # Decoupled infrastructure code
@@ -73,9 +74,9 @@ terraform -chdir=base-vpn/terraform apply
 ```
 
 ### Step 2: Deploy Container Stack (Zero-Downtime)
-Uploads `docker-compose.yml`, renders `management.json`, injects secrets, and starts the containers on the VM over secure IAP:
+Uploads `docker-compose.yml`, renders `management.json`, injects secrets, and executes `docker/deploy.sh` on the VM over secure IAP:
 ```bash
-./base-vpn/deploy.sh
+./base-vpn/remote-deploy.sh
 ```
 
 ### Step 3: Automated Major Version Alerts (Dependabot)
@@ -85,7 +86,7 @@ GitHub Dependabot (`.github/dependabot.yml`) monitors `base-vpn/docker/docker-co
 - When a major version update PR is merged, deploy the update instantly with **zero VM recreation**:
   ```bash
   git pull
-  ./base-vpn/deploy.sh
+  ./base-vpn/remote-deploy.sh
   ```
 
 ### Step 4: Inject Google OAuth Credentials
