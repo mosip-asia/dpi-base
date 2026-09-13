@@ -18,6 +18,8 @@ This repository serves as the central knowledge base, infrastructure runbook, or
     2. **Network Fabric (`dpi-vpn/`)**: 24/7 NetBird Mesh VPN tier.
     3. **Control Plane (`dpi-kube-ops/`)**: On-demand Rancher and central observability tier.
   - **Sovereign Domain Pattern for Workloads**: `dpi-mgmt` is strictly scoped to `dpi-base`. Workload initiatives (MOSIP, DLMS, research testbeds) MUST NEVER store state or secrets in `dpi-mgmt`. Each domain maintains its own GCP folder, a dedicated `<domain>-mgmt` anchor project, and an isolated state bucket (`gs://<domain>-tfstate`).
+  - **Flattened Terraform Layout**: Infrastructure code inside management anchors must live directly at `<project>/terraform/` without nested subdirectories (e.g. avoid `terraform/foundation/`).
+  - **Folder-Level IAM Governance**: Grant team member access at the GCP Folder level using additive bindings (`google_folder_iam_member`) so permissions cleanly inherit to all child projects (`<domain>-mgmt`, `<domain>-*`) without duplicating project-level IAM.
 - **GCS Remote State Backend**: `dpi-base` Terraform modules target `backend "gcs"` with bucket `gs://dpi-mgmt-tfstate` and prefix `foundation`.
 - **Authoritative DNS Invariant**: Public apex domain `dpi.ait.ac.th` is delegated by AIT to Cloud DNS Shard A (`ns-cloud-a1`–`a4`) and anchored in project `ait-brainlab-mgmt`. DNS records point to static IPs across the decoupled projects. Changes follow a strict 3-tier governance policy (Tier 1 GitOps PRs for apex/core; Tier 2 Kubernetes external-dns; Tier 3 delegated subdomains).
 
@@ -45,7 +47,14 @@ AI assistants and documentation templates MUST strictly adhere to the DPI domain
 - **`mgmt.dpi.ait.ac.th`**: Administrative management endpoints and ingress routing.
 - **`demo.dpi.ait.ac.th`** / **`*.demo.dpi.ait.ac.th`**: Live demonstration services and digital public goods prototypes.
 - **`api.dpi.ait.ac.th`**: Public API gateway endpoints.
+- **Domain Identifier Invariant (`DOMAIN_NAME`)**:
+  The domain slug defines the GCP Folder name, the Cloud DNS namespace (`<domain>.dpi.ait.ac.th`), and the mandatory prefix for all projects in that domain (`<domain>-mgmt`, `<domain>-k3s`). The slug must use lowercase alphanumeric characters and hyphens only, with a strict maximum of **24 characters** to keep `<domain>-mgmt` under GCP's 30-character project ID limit.
 
+### 5. Automation & Landing Zone Bootstrap Tooling
+- **Root Environment Configuration**: Repository-wide variables must reside at the repo root in `.env.example` (tracked) and `.env` (gitignored). Tooling must auto-detect target Terraform paths instead of requiring explicit path variables.
+- **Pre-Flight Validation & DRY**: All environment validation logic must reside in `scripts/check_env.sh`. Bootstrap scripts must invoke `check_env.sh` as Step 0 rather than duplicating checks.
+- **Dry-Run & Idempotent Apply**: Seed bootstrap scripts must support a `--plan` / `--dry-run` preview flag and be 100% idempotent (safe to run repeatedly without duplicating resources or errors).
+- **Local Org Admin Execution**: Seed bootstrapping (creating folders, linking billing accounts) must be executed locally by human Organization Administrators with 2FA, never delegated to high-privilege CI/CD service accounts.
 
 ---
 
@@ -59,5 +68,6 @@ AI assistants and documentation templates MUST strictly adhere to the DPI domain
 7. **Control Plane Schedulability**: Any heavy management instance (e.g. Rancher) must support scheduled stopping without impacting workload clusters.
 8. **Per-Project Least Privilege**: Workload contributors, researchers, and developers MUST ONLY receive access at the Project level (e.g. `roles/editor`), never at the Organization level, to prevent uncontrolled resource creation.
 9. **Billing Protection Model**: Protect against unintended cloud spend by maintaining a prepaid credit balance via manual early top-ups ("Make a payment") and configuring budget threshold alerts before launching new workloads.
+10. **Public Billing Privacy**: In public repositories, never commit real GCP Billing Account IDs in code, documentation, or `.env.example`. Always use masked placeholders (`01XXXX-XXXXXX-XXXXXX`).
 
 
