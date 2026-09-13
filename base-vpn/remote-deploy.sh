@@ -49,14 +49,15 @@ echo -e "Source Dir:  ${BOLD}$SCRIPT_DIR/netbird${NC}"
 echo -e "Remote Dir:  ${BOLD}$REMOTE_DIR${NC}"
 echo ""
 
-# Upload docker-compose.yml, management.json.template, .env.template, and deploy.sh
-SCP_CMD="gcloud compute scp --project=$VPN_PROJECT --zone=$ZONE --tunnel-through-iap $SCRIPT_DIR/netbird/docker-compose.yml $SCRIPT_DIR/netbird/management.json.template $SCRIPT_DIR/netbird/.env.template $SCRIPT_DIR/netbird/deploy.sh $VM_NAME:/tmp/"
+# Upload stack manifests and scripts
+SCP_CMD="gcloud compute scp --project=$VPN_PROJECT --zone=$ZONE --tunnel-through-iap $SCRIPT_DIR/netbird/docker-compose.yml $SCRIPT_DIR/netbird/management.json.template $SCRIPT_DIR/netbird/.env.template $SCRIPT_DIR/netbird/deploy.sh $SCRIPT_DIR/netbird/backup_to_gcs.sh $VM_NAME:/tmp/"
 log_cmd "$SCP_CMD"
 gcloud compute scp --project="$VPN_PROJECT" --zone="$ZONE" --tunnel-through-iap \
   "$SCRIPT_DIR/netbird/docker-compose.yml" \
   "$SCRIPT_DIR/netbird/management.json.template" \
   "$SCRIPT_DIR/netbird/.env.template" \
   "$SCRIPT_DIR/netbird/deploy.sh" \
+  "$SCRIPT_DIR/netbird/backup_to_gcs.sh" \
   "$VM_NAME:/tmp/"
 
 log_info "Files uploaded to /tmp on $VM_NAME."

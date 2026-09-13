@@ -48,6 +48,23 @@ if [ ! -f "$SERVICE_DIR/traefik/acme.json" ]; then
 fi
 sudo chmod 600 "$SERVICE_DIR/traefik/acme.json"
 
+# Restore NetBird SQLite Database from GCS if it exists and local store is missing
+if [ ! -f "$SERVICE_DIR/data/store.db" ]; then
+  log_info "Checking GCS for existing NetBird database snapshot..."
+  if gcloud storage cp "gs://base-dpi-ait-ac-th-tfstate/backups/netbird/store.db" "$SERVICE_DIR/data/store.db" 2>/dev/null; then
+    sudo chmod 600 "$SERVICE_DIR/data/store.db"
+    log_info "Restored NetBird store.db from GCS."
+  fi
+fi
+
+# Restore Traefik acme.json from GCS if local file is empty
+if [ ! -s "$SERVICE_DIR/traefik/acme.json" ]; then
+  if gcloud storage cp "gs://base-dpi-ait-ac-th-tfstate/backups/netbird/acme.json" "$SERVICE_DIR/traefik/acme.json" 2>/dev/null; then
+    sudo chmod 600 "$SERVICE_DIR/traefik/acme.json"
+    log_info "Restored Traefik acme.json certificates from GCS."
+  fi
+fi
+
 # Ensure ubuntu system user has docker group permissions
 sudo usermod -aG docker ubuntu 2>/dev/null || true
 
@@ -67,6 +84,15 @@ if [ -f /tmp/.env.template ]; then
   log_cmd "mv /tmp/.env.template $SERVICE_DIR/.env.template"
   sudo mv /tmp/.env.template "$SERVICE_DIR/.env.template"
 fi
+
+if [ -f /tmp/backup_to_gcs.sh ]; then
+  log_cmd "mv /tmp/backup_to_gcs.sh $SERVICE_DIR/scripts/backup_to_gcs.sh"
+  sudo mv /tmp/backup_to_gcs.sh "$SERVICE_DIR/scripts/backup_to_gcs.sh"
+  sudo chmod +x "$SERVICE_DIR/scripts/backup_to_gcs.sh"
+fi
+
+# Ensure 6-hourly backup cron is configured for root
+(sudo crontab -l 2>/dev/null | grep -v 'backup_to_gcs.sh' || true; echo "0 */6 * * * $SERVICE_DIR/scripts/backup_to_gcs.sh >/dev/null 2>&1") | sudo crontab -
 
 # 2. Fetch Secrets from Secret Manager via VM Attached Service Account
 echo -e "\n${BOLD}--- [2/5] Resolving Secrets from GCP Secret Manager ---${NC}"
@@ -175,3 +201,10 @@ sudo docker compose up -d --remove-orphans
 
 echo -e "\n${BOLD}--- Service Health Status ---${NC}"
 sudo docker compose ps
+
+# 6. Snapshot current state to GCS
+echo -e "\n${BOLD}--- [6/6] Synchronizing State Snapshot to GCS ---${NC}"
+if [ -f "$SERVICE_DIR/scripts/backup_to_gcs.sh" ]; then
+  log_cmd "sudo $SERVICE_DIR/scripts/backup_to_gcs.sh"
+  sudo "$SERVICE_DIR/scripts/backup_to_gcs.sh" || true
+fi
