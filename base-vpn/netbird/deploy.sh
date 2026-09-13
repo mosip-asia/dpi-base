@@ -48,6 +48,9 @@ if [ ! -f "$SERVICE_DIR/traefik/acme.json" ]; then
 fi
 sudo chmod 600 "$SERVICE_DIR/traefik/acme.json"
 
+# Ensure ubuntu system user has docker group permissions
+sudo usermod -aG docker ubuntu 2>/dev/null || true
+
 # 1. Move uploaded files from /tmp to /opt/netbird
 echo -e "\n${BOLD}--- [1/5] Syncing Application Manifests ---${NC}"
 if [ -f /tmp/docker-compose.yml ]; then

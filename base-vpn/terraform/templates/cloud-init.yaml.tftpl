@@ -58,6 +58,7 @@ runcmd:
   # 1. Enable and start Docker
   - systemctl enable docker
   - systemctl start docker
+  - usermod -aG docker ubuntu
 
   # 2. Local loopback to bypass GCP hairpin NAT for Traefik
   - echo "127.0.0.1 ${netbird_fqdn}" >> /etc/hosts
