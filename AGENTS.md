@@ -69,10 +69,20 @@ AI assistants and documentation templates MUST strictly adhere to the DPI domain
   - *Anti-Sprawl Rule*: AI assistants must NEVER create fragmented markdown files in nested `docs/` folders. All documentation updates must directly update `README.md`, `STATUS.md`, or `docs/sop.md`.
 - **Billing Account Naming Invariant**:
   All Google Cloud Billing Accounts must strictly adhere to the naming format: `DPI Center - <Team or Grant Name>` (e.g. `DPI Center - Base Platform`, `DPI Center - MOSIP Asia Grant`). This ensures that official Google Cloud PDF tax invoices and prepaid top-up receipts match grant budget lines verbatim for institutional university reimbursement.
-- **GitHub Issue-Driven Development**:
-  - Feature branches must always follow: `feat/issue-<number>-<description>` or `fix/issue-<number>-<description>`.
-  - Pull Requests and commit messages must include linking keywords (`Closes #<number>` or `Resolves #<number>`) so issues and project boards update automatically upon merge.
-  - Task completion checklists in `STATUS.md` must be kept in lockstep with GitHub Issues.
+- **Issue-Driven vs. PR-Driven GitOps Standard**:
+  1. **Separation of Concerns (Issue vs. PR)**:
+     - **GitHub Issue = Specification & Requirements Contract ("WHAT & WHY")**: Defines the problem statement, architecture decisions, acceptance criteria / definition of done, scope boundaries, and high-level milestones. Avoid turning the issue into a micro-commit log or transient scratchpad.
+     - **Pull Request = Implementation & Verification Artifact ("HOW & PROOF")**: Created on a dedicated feature branch (`feat/issue-<number>-<description>` or `fix/issue-<number>-<description>`). Open a **Draft PR on Day 1** as soon as work begins. The PR description contains the implementation approach, atomic commit history with verification proofs/plans, and explicit issue closing keywords (`Closes #<number>`).
+  2. **Draft PR on Day 1**:
+     - As soon as a branch is created and initial scaffolding begins, push and open a Draft PR immediately (`gh pr create --draft`).
+     - Enables continuous asynchronous collaboration, transparent progress visibility, peer review of in-flight design, and prevents duplicate work across team members and AI assistants.
+     - When all tasks and acceptance criteria are fulfilled, convert the PR to Ready for Review (`gh pr ready`).
+  3. **Atomic Commits & Plan-Verification Rule**:
+     - Keep commits atomic and logically self-contained using Conventional Commits (`feat(...)`, `fix(...)`, `docs(...)`, `chore(...)`).
+     - Major changes (e.g., Terraform infrastructure, security configurations, network topologies) should be verified with dry-run/plan execution logs and diff summaries documented in commit messages or PR comments.
+  4. **Task Checklist Synchronization**:
+     - Maintain strict alignment between the GitHub Issue acceptance criteria, the master task tracking checklist in `STATUS.md`, and the PR implementation checklist. Task completion checklists in `STATUS.md` must be kept in lockstep with GitHub Issues.
+
 
 ---
 
