@@ -128,7 +128,42 @@ provider "google" {
 
 ---
 
-## 🌐 Step 5: Decoupled DNS Record Ownership
+## 🛡️ Step 5: Standard VM Security, Access & Secrets Protocol
+
+All Compute Engine instances across the DPI Center must adhere to the 3-pillar security and access invariant:
+
+### Pillar 1: Zero SSH Keys on Disk (GCP OS Login + IAP)
+* **Never bake SSH public keys** into `cloud-init`, instance metadata, or local files.
+* **Enforce OS Login**: In `google_compute_instance`, always set `metadata = { "enable-oslogin" = "TRUE" }`.
+* **Zero-Trust Ingress**: Allow SSH (port 22) **strictly** from Google Cloud Identity-Aware Proxy (`35.235.240.0/20`).
+* **Operator Access**: Team members authenticate using their individual Google accounts (`@ait.asia`) with personal 2FA via:
+  ```bash
+  gcloud compute ssh <instance-name> --tunnel-through-iap
+  ```
+  GCP automatically generates short-lived, ephemeral SSH certificates tied to verified IAM identities.
+
+### Pillar 2: Zero Plaintext Secrets in Cloud-Init (Secret Manager + IAM)
+* **Never embed plain-text secrets**, API tokens, OAuth credentials, or private keys inside `cloud-init` user-data (which is stored in plaintext metadata and inspectable via the GCP console or instance metadata server).
+* **Service Account Binding**: Attach a dedicated service account (`<domain>-<workload>-sa`) to the VM.
+* **Granular Least Privilege**: Grant the service account read access to specific secrets in `<domain>-mgmt` using `google_secret_manager_secret_iam_member`:
+  ```hcl
+  resource "google_secret_manager_secret_iam_member" "oauth_secret_access" {
+    project   = "<domain>-mgmt"
+    secret_id = "my-secret-id"
+    role      = "roles/secretmanager.secretAccessor"
+    member    = "serviceAccount:${google_service_account.vm_sa.email}"
+  }
+  ```
+* **Runtime Hydration**: The VM securely fetches secrets at runtime or deployment using `gcloud secrets versions access latest ...` into root-owned, mode `0600` files.
+
+### Pillar 3: Decoupled Compute vs. Application Lifecycle
+* **Host Infrastructure**: `cloud-init` strictly provisions the OS environment, Docker CE, directories, and systemd units.
+* **Container Workloads**: Application stacks (e.g. `docker-compose.yml`) are deployed and updated independently without recreating the VM.
+* **Zero VM Recreation**: Bumping Docker images or rotating secrets never destroys or rebuilds the VM.
+
+---
+
+## 🌐 Step 6: Decoupled DNS Record Ownership
 
 To prevent `<domain>-mgmt` from becoming a bottleneck, **workload projects manage their own DNS records directly in their own Terraform code**:
 
@@ -158,7 +193,7 @@ resource "google_dns_record_set" "service" {
 
 ---
 
-## 🔒 Step 6: NetBird Mesh VPN Enrollment
+## 🔒 Step 7: NetBird Mesh VPN Enrollment
 
 All downstream nodes join the private NetBird WireGuard overlay mesh (`100.64.0.0/16`):
 

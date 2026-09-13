@@ -97,5 +97,10 @@ AI assistants and documentation templates MUST strictly adhere to the DPI domain
 8. **Per-Project Least Privilege**: Workload contributors, researchers, and developers MUST ONLY receive access at the Project level (e.g. `roles/editor`), never at the Organization level, to prevent uncontrolled resource creation.
 9. **Billing Protection Model**: Protect against unintended cloud spend by maintaining a prepaid credit balance via manual early top-ups ("Make a payment") and configuring budget threshold alerts before launching new workloads.
 10. **Public Billing Privacy**: In public repositories, never commit real GCP Billing Account IDs in code, documentation, or `.env.example`. Always use masked placeholders (`01XXXX-XXXXXX-XXXXXX`).
+11. **Standard VM Security, Access & Secrets Invariant**:
+    - **Zero Static SSH Keys**: All Compute Engine VMs must enforce `enable-oslogin = "TRUE"` and restrict SSH (port 22) strictly to Google Identity-Aware Proxy (IAP: `35.235.240.0/20`). Never bake static SSH public keys into `cloud-init` or instance metadata. Operators authenticate via their individual Google accounts (`@ait.asia`) with personal 2FA.
+    - **Zero Plaintext Secrets in Cloud-Init**: Never store passwords, OAuth credentials, API keys, or private keys inside `cloud-init` user-data (which is stored in plaintext metadata). Attach a dedicated service account with granular `roles/secretmanager.secretAccessor` on `<domain>-mgmt` Secret Manager, pulling credentials into local root-owned mode `0600` files at runtime.
+    - **Decoupled Compute vs. Application Lifecycle**: `cloud-init` strictly provisions OS packages, Docker CE, directories, and systemd units. Container workloads (e.g. `docker-compose.yml`) are deployed and updated independently over secure IAP to eliminate destructive VM recreations on version bumps.
+
 
 

@@ -27,6 +27,22 @@ resource "google_project_iam_member" "vpn_sa_metric_writer" {
   member  = "serviceAccount:${google_service_account.vpn_sa.email}"
 }
 
+# Grant VM service account read access to OAuth secrets in base-mgmt
+resource "google_secret_manager_secret_iam_member" "oauth_client_id_accessor" {
+  project   = var.mgmt_project_id
+  secret_id = "google-oauth-client-id"
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.vpn_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "oauth_client_secret_accessor" {
+  project   = var.mgmt_project_id
+  secret_id = "google-oauth-client-secret"
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.vpn_sa.email}"
+}
+
+
 # ==========================================================
 # 📄 Template Rendering (OS Level Only)
 # ==========================================================
@@ -73,7 +89,8 @@ resource "google_compute_instance" "vpn_vm" {
   }
 
   metadata = {
-    user-data = local.cloud_init_rendered
+    enable-oslogin = "TRUE"
+    user-data      = local.cloud_init_rendered
   }
 
   lifecycle {
