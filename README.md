@@ -1,121 +1,109 @@
 # DPI Center Base (`dpi-base`) — Operations & Infrastructure Hub
 
-Welcome to the **DPI Center (Digital Public Infrastructure Center)** central knowledge base, infrastructure runbook, organization management plane, and GitOps configuration repository.
+Welcome to the **DPI Center (Digital Public Infrastructure Center)** central operations repository, infrastructure runbook, organization management plane, and GitOps hub.
 
 ---
 
-## 📌 Repository Overview
+## 📌 What This Repository Is For
 
-This repository serves as the single source of truth for:
-* **GCP Organization Governance**: Google Cloud Identity Free & Organization administration for **`dpi.ait.ac.th`** (Org ID: `350922776586`).
-* **Team Onboarding & Decisions**: See complete Architecture Decision Records in [`docs/decisions_and_onboarding.md`](docs/decisions_and_onboarding.md).
-* **Cloud Management Plane (`dpi-mgmt/`)**: Authoritative Cloud DNS, root IAM governance, automated Secret Manager key storage, and Single Sign-On (SSO) credentials.
-* **Domain Landscape**: Public DNS records, routing, and email routing for `dpi.ait.ac.th` and managed subdomains.
-* **Service Admin & Workload Runbooks**: Infrastructure definitions and deployment guides for DPI research platforms, identity infrastructure, and digital public goods (including **MOSIP** and **DLMS**).
+This repository acts as the **single source of truth** and **Platform Engine** for the DPI Center under Google Cloud Organization **`dpi.ait.ac.th`** (Org ID: `350922776586`).
+
+It manages:
+1. **Core Management Plane (`dpi-mgmt`)**: Authoritative Cloud DNS subzones, IAM governance, automated Secret Manager storage, and GCS remote state for platform foundation.
+2. **Network Fabric (`dpi-vpn`)**: 24/7 NetBird WireGuard mesh VPN connecting all distributed clusters and developer workstations over private overlay IPs (`100.64.0.0/16`).
+3. **Multi-Cluster Control Plane (`dpi-kube-ops`)**: On-demand Rancher Kubernetes manager (with GCP Instance Schedules for 65–75% cost savings) and ultra-low overhead telemetry (VictoriaMetrics + Grafana Loki).
+4. **Landing Zone Automation (`scripts/`)**: Idempotent bootstrap tooling (`bootstrap_domain.sh`, `check_env.sh`) that provisions new Sovereign Domains in 60 seconds.
 
 ---
 
-## 🏗️ Architecture & Domain Landscape
+## 🏗️ Architecture: Platform Engine vs. Sovereign Domains
 
-DPI Center operates as an independent organization with dedicated cloud governance:
+DPI Center enforces a **Federated Domain Landing Zone Pattern**:
+* **`dpi-base` (This Repository & Folder)**: The **Platform Engine**. Contains only shared network fabric, cluster management, and base foundation. Remote state (`gs://dpi-mgmt-tfstate`) and secrets in `dpi-mgmt` are **strictly scoped to `dpi-base` only**.
+* **Workload Domains (`mosip-asia`, `dlms`, `ai-team`, etc.)**: Autonomous product initiatives. Each domain receives its own GCP Folder, dedicated grant billing account, and dedicated **`<domain>-mgmt` anchor project** (`gs://<domain>-tfstate`) with zero blast radius to `dpi-base`.
 
+```mermaid
+flowchart TD
+    ORG["🏢 Google Cloud Organization: dpi.ait.ac.th (350922776586)"]
+
+    subgraph FOLDER_BASE ["📁 Folder: dpi-base (Platform Provider — THIS REPO)"]
+        direction TB
+        P_MGMT["📦 Project: dpi-mgmt<br/>• gs://dpi-mgmt-tfstate (Base state ONLY)<br/>• Base secrets (OAuth, VPN tokens)<br/>• Subzone: base.dpi.ait.ac.th"]
+        P_VPN["📦 Project: dpi-vpn (24/7 NetBird Mesh VPN)"]
+        P_KUBE["📦 Project: dpi-kube-ops (Rancher & Observability)"]
+    end
+
+    subgraph FOLDER_MOSIP ["📁 Folder: mosip-asia (Identity Domain)"]
+        direction TB
+        M_MGMT["📦 Project: mosip-asia-mgmt<br/>• gs://mosip-asia-tfstate<br/>• Dedicated Secret Manager<br/>• Dedicated CI/CD SA"]
+        M_WORK["📦 Project: mosip-asia-k3s"]
+    end
+
+    subgraph FOLDER_DLMS ["📁 Folder: dlms (Driving License Domain)"]
+        direction TB
+        D_MGMT["📦 Project: dlms-mgmt<br/>• gs://dlms-tfstate<br/>• Dedicated Secret Manager"]
+        D_WORK["📦 Project: dlms-workload"]
+    end
+
+    ORG --> FOLDER_BASE
+    ORG --> FOLDER_MOSIP
+    ORG --> FOLDER_DLMS
+
+    P_VPN -.->|WireGuard Overlay Mesh| M_WORK
+    P_VPN -.->|WireGuard Overlay Mesh| D_WORK
+    P_KUBE -.->|Kubernetes Management| M_WORK
+    P_KUBE -.->|Kubernetes Management| D_WORK
 ```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                           DPI DOMAIN & IDENTITY LANDSCAPE                       │
-└─────────────────────────────────────────────────────────────────────────────────┘
-                                         │
-        ┌────────────────────────────────┴────────────────────────────────┐
-        ▼                                                                 ▼
-┌────────────────────────────────────────┐      ┌────────────────────────────────────────┐
-│          Operating Admins              │      │            DPI Apex Domain             │
-│  `akraradet@ait.asia` & `nuttasit@...` │      │            `dpi.ait.ac.th`             │
-├────────────────────────────────────────┤      ├────────────────────────────────────────┤
-│ - Primary Technical & IAM Admins       │      │ - Google Cloud Organization Root       │
-│ - Non-expiring operational identities  │      │ - Authoritative Cloud DNS Apex         │
-│ - Org Admins & Billing Admins in GCP   │      │ - `admin@dpi.ait.ac.th` (Super Admin)  │
-└────────────────────────────────────────┘      └────────────────────────────────────────┘
-```
 
-### Identity & Governance Matrix
+---
 
-| Identity / Domain | Entity | Role in Infrastructure | Governance Standard |
+## 👥 Identity & Governance Model
+
+We enforce a strict separation between break-glass recovery and daily operational identities:
+
+| Identity | Entity | Role in Infrastructure | Governance Standard |
 | :--- | :--- | :--- | :--- |
-| **`admin@dpi.ait.ac.th`** | Cloud Identity Root | **Super Administrator** | Root break-glass recovery account for Google Admin Console and Org policies. |
-| **`akraradet@ait.asia`** | DPI Operations | **Operating Admin** | Daily administrative identity. Holds `roles/resourcemanager.organizationAdmin`, `roles/billing.admin`, `roles/resourcemanager.projectCreator`. |
-| **`nuttasit@ait.asia`** | DPI Operations | **Operating Admin** | Daily administrative identity. Holds `roles/resourcemanager.organizationAdmin`, `roles/billing.admin`, `roles/resourcemanager.projectCreator`. |
-| **`dpi.ait.ac.th`** | DPI Apex Domain | **Google Cloud Organization** | Standalone Cloud Identity Free organization ($0/mo, Org ID: `350922776586`) governing all DPI projects, folders, and IAM policies. |
-
-
----
-
-### 🛡️ Decoupled Infrastructure Model
-
-To guarantee 100% uptime, zero single points of failure, and strict cost controls, infrastructure is decoupled into three dedicated GCP projects:
-
-```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                        3-PROJECT DECOUPLED GOVERNANCE MODEL                            │
-└────────────────────────────────────────────────────────────────────────────────────────┘
-                                            │
-          ┌─────────────────────────────────┼─────────────────────────────────┐
-          ▼                                 ▼                                 ▼
-┌──────────────────────────────┐ ┌──────────────────────────────┐ ┌──────────────────────────────┐
-│  ANCHOR PLANE: `dpi-mgmt`    │ │   NETWORK TIER: `dpi-vpn`    │ │ K8S & OBS: `dpi-kube-ops`    │
-├──────────────────────────────┤ ├──────────────────────────────┤ ├──────────────────────────────┤
-│ - Org: `dpi.ait.ac.th`       │ │ - NetBird Mesh VPN (WireGuard│ │ - Rancher Community (MOSIP)  │
-│ - Monthly Cost: ~$0.20/mo    │ │ - 24/7 Always-On (e2-small)  │ │ - VictoriaMetrics & Loki     │
-│ - DNS: Authoritative CloudDNS│ │ - Monthly Cost: ~$14.00/mo   │ │ - Schedulable (e2-standard-4)│
-│ - Terraform Remote State     │ │ - Overlay: 100.64.0.0/16     │ │ - Monthly Cost: ~$25.00/mo   │
-└──────────────────────────────┘ └──────────────────────────────┘ └──────────────────────────────┘
-```
-
-### 🗄️ Centralized Governance vs. Compute Separation Matrix
-
-To eliminate confusion across team members, the table below defines exactly where shared state, DNS records, secrets, and compute workloads reside:
-
-| Infrastructure Asset | Target GCP Project | State / Configuration Location | Architecture & Operational Invariant |
-| :--- | :--- | :--- | :--- |
-| **Authoritative Cloud DNS (`dpi.ait.ac.th`)** | **`dpi-mgmt`** | `dpi-mgmt/terraform/foundation/dns.tf` | **Centralized in `dpi-mgmt`**. All public subdomains (`vpn.mgmt.*`, `rancher.mgmt.*`, `demo.*`, `api.*`) are provisioned exclusively in the central Cloud DNS zone in `dpi-mgmt`. Sub-projects do not manage public DNS zones. |
-| **Terraform Remote State Backend** | **`dpi-mgmt`** | GCS Bucket: `gs://dpi-mgmt-tfstate` | **Centralized in `dpi-mgmt`**. A single versioned, uniform-access GCS bucket stores state across all three tiers with distinct state prefixes: `foundation/`, `vpn/`, and `kube-ops/`. |
-| **Root Secrets & Master OAuth** | **`dpi-mgmt`** | Google Secret Manager (`dpi-mgmt`) | **Centralized in `dpi-mgmt`**. Organization-level secrets (OAuth credentials, master WireGuard keys, recovery tokens) reside in `dpi-mgmt`. Compute instances read authorized secrets via IAM service accounts. |
-| **Mesh VPN Gateway (NetBird)** | **`dpi-vpn`** | `dpi-vpn/terraform/` & `dpi-vpn/docker/` | **Isolated Compute in `dpi-vpn`**. Minimal `e2-small` VM running 24/7 to maintain the WireGuard overlay network. Pure network fabric; never polluted by Kubernetes or storage state. |
-| **Cluster Ops & Observability (Rancher / Grafana)** | **`dpi-kube-ops`** | `dpi-kube-ops/terraform/` & `helm/` | **Isolated Compute in `dpi-kube-ops`**. Compute instance (`e2-standard-4`) scheduled to sleep when inactive (~65–75% savings). Can be stopped or rebuilt without affecting DNS or mesh VPN. |
+| **`admin@dpi.ait.ac.th`** | Cloud Identity Root | **Super Administrator** | Root break-glass recovery account for Google Admin Console and Org policies. Never used for daily CLI operations. |
+| **`akraradet@ait.asia`** | DPI Operations | **Operating Administrator** | Daily administrative identity. Holds `roles/resourcemanager.organizationAdmin`, `roles/billing.admin`, `roles/resourcemanager.projectCreator`. |
+| **`nuttasit@ait.asia`** | DPI Operations | **Operating Administrator** | Daily administrative identity. Holds `roles/resourcemanager.organizationAdmin`, `roles/billing.admin`, `roles/resourcemanager.projectCreator`. |
+| **`dpi.ait.ac.th`** | Apex Domain | **Cloud Identity Free** | Free identity tier ($0/mo, Org ID: `350922776586`) governing all DPI projects, folders, and IAM policies. |
 
 ---
 
 ## 📁 Repository Directory Structure
 
-The repository structure matches our GCP projects with 1-to-1 symmetry:
-
 ```text
 dpi-base/
-├── README.md                      # Central landing page & architecture overview (this file)
-├── AGENTS.md                      # AI Assistant context, system architecture, and operating rules
-├── GEMINI.md                      # Shortcut pointer to AGENTS.md
+├── README.md                      # What this repository is for (this file)
+├── STATUS.md                      # Current situation, deployment checklist & roadmap
+├── AGENTS.md                      # AI Assistant operating guidelines & invariants
+├── GEMINI.md                      # Pointer to AGENTS.md
+├── .env.example                   # Domain configuration template (copy to .env)
 │
-├── docs/                          # 📋 Operational SOPs, ADRs & Infrastructure Runbooks
-│   ├── decisions_and_onboarding.md # Complete team onboarding guide & architecture decisions
-│   └── infra/network/             # DNS topology and network runbooks
+├── scripts/                       # Platform Automation & Admin Tooling
+│   ├── check_env.sh               # Pre-flight environment & GCP API validator
+│   └── bootstrap_domain.sh        # Seed bootstrap with --plan & idempotent apply
 │
-├── dpi-mgmt/                      # 🛡️ GCP Project: `dpi-mgmt` (Cloud DNS & Governance)
-│   ├── checklist.md               # Master phase tracking checklist
+├── docs/                          # Standard Operating Procedures (Runbooks)
+│   └── sop.md                     # Master SOP: New Domain, New Project, Base Infra
+│
+├── dpi-mgmt/                      # GCP Project: dpi-mgmt (Cloud DNS & Governance)
 │   ├── oauth_setup.md             # Google OAuth2 / OIDC console setup SOP
 │   └── terraform/                 # Foundation Cloud DNS, IAM, Secrets, GCS State
 │
-├── dpi-vpn/                       # 🌐 GCP Project: `dpi-vpn` (NetBird Mesh VPN)
+├── dpi-vpn/                       # GCP Project: dpi-vpn (NetBird Mesh VPN)
 │   ├── terraform/                 # e2-small VM, static IP, firewall rules
 │   └── docker/                    # NetBird docker-compose & reverse proxy configs
 │
-└── dpi-kube-ops/                  # 📊 GCP Project: `dpi-kube-ops` (Rancher & Observability)
+└── dpi-kube-ops/                  # GCP Project: dpi-kube-ops (Rancher & Observability)
     ├── terraform/                 # e2-standard-4 VM, Instance Schedule, K3s startup
     └── helm/                      # Rancher Community, VictoriaMetrics & Grafana values
 ```
 
 ---
 
-## 🚀 Quick Start & Next Steps
+## 🔗 Quick Navigation
 
-1. Read the **Team Onboarding & Architecture Decisions** in [`docs/decisions_and_onboarding.md`](docs/decisions_and_onboarding.md).
-2. Review the implementation checklist in [`dpi-mgmt/checklist.md`](dpi-mgmt/checklist.md).
-3. Track active milestones on **[GitHub Epic #1](https://github.com/mosip-asia/dpi-base/issues/1)**.
-
+* 🚦 **Current Situation & Deployment Progress**: See [`STATUS.md`](STATUS.md).
+* 📖 **How to Add a New Domain, Project, or Infra**: Follow [`docs/sop.md`](docs/sop.md).
+* 🎯 **GitHub Milestones & Tracking**: [GitHub Epic #1](https://github.com/mosip-asia/dpi-base/issues/1).

@@ -12,8 +12,8 @@ variable "region" {
 
 variable "domain_name" {
   type        = string
-  description = "Apex domain name for DPI Center (must end with dot)"
-  default     = "dpi.ait.ac.th."
+  description = "Subzone domain name for DPI Base Infrastructure (must end with dot)"
+  default     = "base.dpi.ait.ac.th."
 }
 
 

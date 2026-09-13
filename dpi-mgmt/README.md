@@ -14,10 +14,8 @@ The DPI Center management plane is designed to be:
 ```text
 dpi-mgmt/
 ├── README.md                      # Management plane architecture & operations (this file)
-├── checklist.md                   # Master implementation checklist & status roadmap
 ├── oauth_setup.md                 # Google OAuth2 / OIDC console setup SOP
-└── terraform/                     # Modular Terraform IaC
-    └── foundation/                # Project baseline, Cloud DNS (dpi.ait.ac.th), IAM, Secrets
+└── terraform/                     # Project baseline, Cloud DNS, IAM, Secrets (flattened layout)
 ```
 
 ---

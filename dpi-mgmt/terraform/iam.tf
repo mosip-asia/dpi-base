@@ -7,6 +7,7 @@ resource "google_project_service" "iam_apis" {
   for_each = toset([
     "iam.googleapis.com",
     "cloudresourcemanager.googleapis.com",
+    "compute.googleapis.com",
   ])
 
   project            = var.project_id
