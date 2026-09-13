@@ -452,13 +452,10 @@ TFVARS_CONTENT=$(cat <<EOF
 # Generated at       : $(date -u +"%Y-%m-%dT%H:%M:%SZ")
 # ==============================================================================
 
-organization_id    = "${ORGANIZATION_ID}"
-folder_id          = "${FOLDER_FULL_ID}"
-project_id         = "${PROJECT_ID}"
-billing_account_id = "${BILLING_ACCOUNT_ID}"
-domain_name        = "${SUBDOMAIN}."
-state_bucket       = "${BUCKET_NAME}"
-region             = "${REGION}"
+project_id     = "${PROJECT_ID}"
+region         = "${REGION}"
+domain_name    = "${SUBDOMAIN}."
+folder_id      = "${FOLDER_FULL_ID}"
 
 # Team Collaborators (Folder IAM)
 folder_admins = [

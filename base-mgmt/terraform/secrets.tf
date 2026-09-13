@@ -24,12 +24,6 @@ resource "google_secret_manager_secret" "oauth_client_id" {
   depends_on = [google_project_service.secretmanager_api]
 }
 
-resource "google_secret_manager_secret_version" "oauth_client_id_version" {
-  count       = var.google_oauth_client_id != "" ? 1 : 0
-  secret      = google_secret_manager_secret.oauth_client_id.id
-  secret_data = var.google_oauth_client_id
-}
-
 # Secret 2: Google OAuth Web Client Secret
 resource "google_secret_manager_secret" "oauth_client_secret" {
   secret_id = "google-oauth-client-secret"
@@ -45,8 +39,3 @@ resource "google_secret_manager_secret" "oauth_client_secret" {
   depends_on = [google_project_service.secretmanager_api]
 }
 
-resource "google_secret_manager_secret_version" "oauth_client_secret_version" {
-  count       = var.google_oauth_client_secret != "" ? 1 : 0
-  secret      = google_secret_manager_secret.oauth_client_secret.id
-  secret_data = var.google_oauth_client_secret
-}
