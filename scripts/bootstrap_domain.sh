@@ -463,6 +463,8 @@ ${ADMINS_HCL}]
 
 folder_members = [
 ${MEMBERS_HCL}]
+
+billing_account_id = "${BILLING_ACCOUNT_ID}"
 EOF
 )
 

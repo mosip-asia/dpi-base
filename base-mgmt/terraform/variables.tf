@@ -21,13 +21,16 @@ variable "domain_name" {
 variable "folder_id" {
   type        = string
   description = "Parent GCP Folder ID (e.g. folders/123456 or numeric ID)"
-  default     = ""
+  default     = "740224775327"
 }
 
 variable "folder_admins" {
   type        = list(string)
   description = "List of administrator emails granted access"
-  default     = []
+  default     = [
+    "akraradet@ait.asia",
+    "nuttasit@ait.asia",
+  ]
 }
 
 variable "folder_members" {
@@ -35,3 +38,10 @@ variable "folder_members" {
   description = "List of viewer emails granted access"
   default     = []
 }
+
+variable "billing_account_id" {
+  type        = string
+  description = "Google Cloud Billing Account ID for projects in this domain"
+  default     = ""
+}
+

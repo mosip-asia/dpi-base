@@ -70,6 +70,32 @@ We enforce a strict separation between break-glass recovery and daily operationa
 
 ---
 
+## 🚀 Quickstart: Developer Workspace Setup (Zero-Drift)
+
+When onboarding as an operator or cloning this repository, follow this 3-step setup to synchronize environment configurations and secrets directly from Google Cloud Secret Manager:
+
+### 1. Authenticate with Google Cloud
+Ensure your local `gcloud` CLI and Application Default Credentials (ADC) are authenticated with your authorized operating identity (e.g. `@ait.asia`):
+```bash
+gcloud auth login
+gcloud auth application-default login
+```
+
+### 2. Pull Authoritative Environment & Secrets
+Run the workspace synchronizer to automatically pull the Billing Account ID and platform secrets from `base-mgmt` Secret Manager:
+```bash
+./scripts/pull_env.sh
+```
+*This command validates your GCP IAM access and deterministically generates your local `.env` and `base-mgmt/terraform/terraform.tfvars` with 100% parity, zero manual copy-pasting, and zero configuration drift.*
+
+### 3. Verify Configuration
+Run pre-flight checks to ensure your workstation is ready:
+```bash
+./scripts/check_env.sh
+```
+
+---
+
 ## 📁 Repository Directory Structure
 
 ```text
@@ -81,8 +107,10 @@ dpi-base/
 ├── .env.example                   # Domain configuration template (copy to .env)
 │
 ├── scripts/                       # Platform Automation & Admin Tooling
+│   ├── pull_env.sh                # Workspace secret synchronizer from Secret Manager
 │   ├── check_env.sh               # Pre-flight environment & GCP API validator
 │   └── bootstrap_domain.sh        # Seed bootstrap with --plan & idempotent apply
+
 │
 ├── docs/                          # Standard Operating Procedures (Runbooks)
 │   └── sop.md                     # Master SOP: New Domain, New Project, Base Infra

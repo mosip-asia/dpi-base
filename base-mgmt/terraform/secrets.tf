@@ -39,3 +39,25 @@ resource "google_secret_manager_secret" "oauth_client_secret" {
   depends_on = [google_project_service.secretmanager_api]
 }
 
+# Secret 3: Google Cloud Billing Account ID (for automated workspace sync)
+resource "google_secret_manager_secret" "billing_account_id" {
+  secret_id = "billing-account-id"
+
+  replication {
+    auto {}
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  depends_on = [google_project_service.secretmanager_api]
+}
+
+resource "google_secret_manager_secret_version" "billing_account_id_val" {
+  count       = var.billing_account_id != "" ? 1 : 0
+  secret      = google_secret_manager_secret.billing_account_id.id
+  secret_data = var.billing_account_id
+}
+
+
