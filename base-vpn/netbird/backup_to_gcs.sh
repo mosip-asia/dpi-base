@@ -12,6 +12,9 @@
 # ==============================================================================
 set -euo pipefail
 
+# Ensure standard system utilities and cloud CLI tools are in PATH for crontab execution
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:${PATH:-}"
+
 NETBIRD_DIR="${NETBIRD_DIR:-/opt/netbird}"
 
 # Single Source of Truth: load configuration from .env / .env.template
