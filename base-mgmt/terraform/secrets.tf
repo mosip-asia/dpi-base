@@ -39,33 +39,22 @@ resource "google_secret_manager_secret" "oauth_client_secret" {
   depends_on = [google_project_service.secretmanager_api]
 }
 
-# Secret 3: Google Cloud Billing Account ID (for automated workspace sync)
-resource "google_secret_manager_secret" "billing_account_id" {
-  secret_id = "billing-account-id"
-
-  replication {
-    auto {}
-  }
-
-  lifecycle {
-    prevent_destroy = true
-  }
-
-  depends_on = [google_project_service.secretmanager_api]
-}
-
-# --- Dynamic Billing Resolution: Direct from Secret Manager for Team & CI/CD ---
-# Child projects (prj-*.tf) read billing_account_id directly from Secret Manager,
-# so team members and CI/CD never need to know or store the billing account ID on disk.
+# ==========================================================
+# 🔑 Platform Prerequisite: Authoritative Billing Account ID
+# ==========================================================
+# Seeded on Day 0 by scripts/bootstrap_domain.sh directly into Secret Manager.
+# Child project envelopes (prj-*.tf) read it dynamically here so team members
+# and CI/CD never need to know, store, or manage the billing ID on local disk.
 data "google_secret_manager_secret_version" "billing_account" {
   project = var.project_id
-  secret  = google_secret_manager_secret.billing_account_id.secret_id
+  secret  = "billing-account-id"
   version = "latest"
 }
 
 locals {
   billing_account_id = data.google_secret_manager_secret_version.billing_account.secret_data
 }
+
 
 
 

@@ -114,21 +114,16 @@ This provisions:
 1. **Project Protection Lien**: Prevents accidental deletion of the anchor project.
 2. **Cloud DNS Managed Zone**: Authoritative subzone (`<domain>.dpi.ait.ac.th.`).
 3. **Secret Manager Store**:
-   - `billing-account-id`: Secret container for the domain's billing account.
-   - `google-oauth-client-id` & `google-oauth-client-secret`: SSO credential containers.
+   - `billing-account-id`: Platform prerequisite secret seeded by `bootstrap_domain.sh` on Day 0 and read via `data` source.
+   - `google-oauth-client-id` & `google-oauth-client-secret`: SSO credential shells managed by Terraform.
 4. **Folder-Level IAM**: Additive bindings (`roles/editor`, `roles/resourcemanager.folderAdmin`) for team members.
 
-### Step 3.1: Seed Secret Payloads (One-Time Admin Seeding)
+### Step 3.1: Seed OAuth Secret Payloads (One-Time Admin Seeding)
 
-Because sensitive values must never be committed to version control, the administrator seeds the actual payload into Secret Manager once out-of-band:
+The `billing-account-id` secret is already created and seeded automatically by `bootstrap_domain.sh`. Once the Google OAuth Web Client credentials are generated in GCP Console (see `base-mgmt/oauth_setup.md`), the administrator seeds the OAuth secrets once out-of-band:
 
 ```bash
-# 1. Seed Billing Account ID (if not already seeded by bootstrap_domain.sh):
-echo -n "${BILLING_ACCOUNT_ID}" | gcloud secrets versions add billing-account-id \
-  --project="<domain>-mgmt" \
-  --data-file=-
-
-# 2. Seed Google OAuth Client Credentials (once generated in GCP Console):
+# Seed Google OAuth Client Credentials (once generated in GCP Console):
 echo -n "YOUR_GOOGLE_CLIENT_ID" | gcloud secrets versions add google-oauth-client-id \
   --project="<domain>-mgmt" \
   --data-file=-
@@ -138,6 +133,7 @@ echo -n "YOUR_GOOGLE_CLIENT_SECRET" | gcloud secrets versions add google-oauth-c
   --data-file=-
 ```
 *Once seeded, secret versions are permanent and immutable. All future Terraform runs query Secret Manager dynamically without needing secrets on disk.*
+
 
 ---
 
