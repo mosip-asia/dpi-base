@@ -6,20 +6,34 @@
 ---
 
 ## 🏗 Architecture
-* **Core Service**: NetBird Mesh VPN (Management API, Signal service, Coturn STUN/TURN, Dashboard UI)
-* **Compute Host**: `e2-small` (2 vCPU, 2 GB RAM)
+* **Core Service**: NetBird Mesh VPN Control Plane (Management API, Signal service, Relay service, Dashboard UI)
+* **Edge Proxy**: Traefik v3 with automated Let's Encrypt SSL (`acme.json` via HTTP-01 challenge)
+* **Compute Host**: `e2-small` (2 vCPU, 2 GB RAM, 30 GB `pd-balanced` disk) running Ubuntu 24.04 LTS
+* **Provisioning Method**: Declarative `cloud-init` (`#cloud-config`) via `user-data`
 * **Operating Mode**: **24/7 Always-On** (~$14/month)
-* **Public Static IP**: Attached for WebRTC signaling and STUN/TURN UDP traversal
-* **DNS FQDN**: `netbird.dpi.ait.ac.th` (and `signal.dpi.ait.ac.th`)
+* **Public Static IP**: Attached for WebRTC signaling and Traefik edge routing
+* **DNS FQDN**: `netbird.base.dpi.ait.ac.th` (anchored in `base-mgmt` Cloud DNS zone `dpi-base`)
+* **Persistence & Hydration**: SQLite database (`store.db`) auto-hydrated from `gs://base-dpi-ait-ac-th-tfstate/backups/netbird/store.db` on boot, with 6-hourly automated snapshots and graceful shutdown backup
 
 ---
 
 ## 📁 Directory Structure
 ```text
 base-vpn/
-├── README.md              # This documentation
-├── terraform/             # VPC, firewall rules (UDP 3478, 10000, 51820), static IP, e2-small VM
-└── docker/                # NetBird docker-compose.yml, Caddy/Nginx reverse proxy, OIDC configs
+├── README.md              # Architecture and operating runbook
+├── update_oauth.sh        # Helper script to inject Google OAuth credentials
+└── terraform/             # Flattened infrastructure code
+    ├── backend.tf         # GCS backend (gs://base-dpi-ait-ac-th-tfstate/base-vpn)
+    ├── main.tf            # Provider configuration
+    ├── variables.tf       # Parameter declarations
+    ├── network.tf         # Regional static IP & zero-trust firewall rules
+    ├── compute.tf         # e2-small VM, service account, and cloud-init rendering
+    ├── dns.tf             # Decoupled DNS record in base-mgmt
+    ├── outputs.tf         # Static IP, NetBird URL, VM outputs
+    └── templates/
+        ├── cloud-init.yaml.tftpl    # Declarative OS provisioning & systemd service
+        ├── docker-compose.yml.tftpl # Traefik v3 + NetBird stack
+        └── management.json.tftpl    # NetBird management & OIDC config
 ```
 
 ---
@@ -40,4 +54,26 @@ NetBird uses **Google OAuth2 / OIDC** for single sign-on (SSO), allowing operato
 3. **Setup Keys for Automation**: Downstream K3s clusters do not use human OAuth logins; they join using pre-shared Setup Keys (`k3s-control-enroll`, `k3s-downstream-enroll`) injected via Terraform/Secret Manager.
 
 See complete setup instructions in [`base-mgmt/oauth_setup.md`](../base-mgmt/oauth_setup.md).
+
+---
+
+## 🚀 Deployment & Operations
+
+### 1. Provision Infrastructure
+```bash
+# Validate pre-flight environment
+./scripts/check_env.sh
+
+# Deploy base-vpn infrastructure
+terraform -chdir=base-vpn/terraform init
+terraform -chdir=base-vpn/terraform apply
+```
+
+### 2. Inject Google OAuth Credentials
+Once the OAuth Web Client ID and Secret are created in GCP Console (per [`oauth_setup.md`](../base-mgmt/oauth_setup.md)):
+```bash
+./base-vpn/update_oauth.sh "<CLIENT_ID>" "<CLIENT_SECRET>"
+```
+This automatically saves credentials to Secret Manager and updates the running NetBird instance over secure IAP SSH without downtime or VM recreation.
+
 

@@ -62,14 +62,15 @@
 * **Tracking Issue**: [Issue #4](https://github.com/mosip-asia/dpi-base/issues/4)
 
 | Task ID | Task Description | Target Resource | Status | Notes / Output |
-| :---: | :--- | :--- | :---: | :--- |
+| :---: | :--- | :--- | :--- | :--- |
 | `2.1` | Create Project `base-vpn` & Link Billing | `base-vpn` (`945976338321`) | 🟢 Verified | Created via `prj-base-vpn.tf`, billing linked from Secret Manager, lien active |
-| `2.2` | Terraform Infrastructure | `base-vpn/terraform/` | 🔴 Planned | VM (`e2-small`), regional static IP, firewall rules |
-| `2.3` | Decoupled DNS Records | `base-mgmt` Cloud DNS zone | 🔴 Planned | `netbird.base.dpi.ait.ac.th`, `signal.base.dpi.ait.ac.th` |
-| `2.4` | NetBird Docker Stack & Caddy Reverse Proxy | `base-vpn/docker/` | 🔴 Planned | NetBird management, signal, coturn, Caddy TLS |
-| `2.5` | NetBird OAuth SSO & Admin Approval | Google OAuth2 Web Client | 🔴 Planned | Integrated with Google Identity with admin-approval workflow |
+| `2.2` | Terraform Infrastructure & Cloud-Init | `base-vpn/terraform/` | 🟡 Scaffolding Ready | VM (`e2-small`), regional static IP, zero-trust firewall, `cloud-init` ready for apply |
+| `2.3` | Decoupled DNS Record | `base-mgmt` Cloud DNS zone | 🟡 Scaffolding Ready | `netbird.base.dpi.ait.ac.th` -> static IP in zone `dpi-base` |
+| `2.4` | NetBird Docker Stack & Traefik v3 Proxy | `templates/` | 🟡 Scaffolding Ready | Traefik v3 (Let's Encrypt), NetBird Dashboard, Signal, Management, Relay |
+| `2.5` | NetBird OAuth SSO & Admin Approval | Google OAuth2 Web Client | 🔴 Planned | Assisted via `./base-vpn/update_oauth.sh` once client ID/secret generated |
 
 ---
+
 
 ### Phase 3: Multi-Cluster Control Plane (`base-kube-ops`) (Planned)
 * **Lead**: Nuttasit (`@BossNP` / `@nuttasit`)
