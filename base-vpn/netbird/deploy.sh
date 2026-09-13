@@ -56,6 +56,9 @@ if [ -f /tmp/backup_to_gcs.sh ]; then
   sudo chmod +x "$NETBIRD_DIR/scripts/backup_to_gcs.sh"
 fi
 
+# Clean up any leftover staging files in /tmp so no ext_* artifacts remain
+sudo rm -f /tmp/docker-compose.yml /tmp/management.json.template /tmp/.env.template /tmp/backup_to_gcs.sh /tmp/deploy.sh 2>/dev/null || true
+
 # 2. Load Configuration from .env / .env.template (Single Source of Truth)
 echo -e "\n${BOLD}--- [2/6] Loading Configuration & Restoring State ---${NC}"
 if [ -f "$NETBIRD_DIR/.env.template" ]; then
@@ -174,14 +177,25 @@ if [ -f "$NETBIRD_DIR/management.json.template" ]; then
       "$NETBIRD_DIR/management.json.template" | sudo tee "$NETBIRD_DIR/management.json" > /dev/null
 fi
 
+# Set ownership of the service directory to ubuntu:docker
+log_cmd "chown -R ubuntu:docker $NETBIRD_DIR"
+sudo chown -R ubuntu:docker "$NETBIRD_DIR" 2>/dev/null || true
+
+# Sensitive credentials readable/writable by ubuntu (0600)
 log_cmd "chmod 600 $NETBIRD_DIR/.env $NETBIRD_DIR/management.json"
 sudo chmod 600 "$NETBIRD_DIR/.env" "$NETBIRD_DIR/management.json" 2>/dev/null || true
+
+# Traefik requires acme.json to be strictly 0600 owned by root
 if [ -f "$NETBIRD_DIR/traefik/acme.json" ]; then
+  sudo chown root:root "$NETBIRD_DIR/traefik/acme.json" 2>/dev/null || true
   sudo chmod 600 "$NETBIRD_DIR/traefik/acme.json" 2>/dev/null || true
 fi
-log_cmd "chown root:root on all stack configs"
-sudo chown root:root "$NETBIRD_DIR/docker-compose.yml" "$NETBIRD_DIR/.env" "$NETBIRD_DIR/management.json" "$NETBIRD_DIR/deploy.sh" 2>/dev/null || true
-log_info "Configuration rendered and permissions locked down (0600 root:root)."
+
+# Ensure compose file and scripts are readable/executable
+sudo chmod 644 "$NETBIRD_DIR/docker-compose.yml" 2>/dev/null || true
+sudo chmod 755 "$NETBIRD_DIR/deploy.sh" "$NETBIRD_DIR/scripts/backup_to_gcs.sh" 2>/dev/null || true
+
+log_info "Permissions configured: owned by 'ubuntu:docker', secrets mode 0600, acme.json mode 0600 root."
 
 # 5. Swapfile Memory Protection (2GB swap for e2-micro 1GB RAM)
 echo -e "\n${BOLD}--- [5/6] Memory Protection (Swapfile Check) ---${NC}"
