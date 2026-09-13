@@ -71,7 +71,7 @@
 | `2.4` | NetBird Docker Stack & Traefik v3 Proxy | `base-vpn/netbird/` | 🟢 Verified | Traefik v3, NetBird stack, and Dependabot major-only filter |
 | `2.5` | Zero-Downtime Stack Deployer & Hot Backup | `base-vpn/remote-deploy.sh` | 🟢 Verified | Live over IAP; all 5 containers Up; GCS hot snapshots verified |
 | `2.6` | NetBird OAuth SSO & Admin Approval | Google OAuth2 Web Client | 🟢 Verified Live | Secret Manager keys fetched by VM SA; Google OIDC auth enabled |
-| `2.7` | Canonical Production CNAME Pointer | Parent Zone `dpi-center` (`ait-brainlab-mgmt`) | 🔴 Planned (TODO) | Point `netbird.dpi.ait.ac.th` CNAME $\rightarrow$ `netbird.base.dpi.ait.ac.th` (TTL 60s) |
+| `2.7` | Canonical Production CNAME Pointer | Parent Zone `dpi-center` (`ait-brainlab-mgmt`) | 🟢 Verified Live | `netbird.dpi.ait.ac.th` CNAME $\rightarrow$ `netbird.base.dpi.ait.ac.th`; Let's Encrypt TLS active |
 
 ---
 
@@ -114,8 +114,9 @@
 | **Network Fabric Project** | `base-vpn` (`945976338321`) | Folder `base` | 🟢 Active |
 | **VPN Regional Static IP** | `35.240.138.109` | `base-vpn` (`asia-southeast1`) | 🟢 Allocated & Attached |
 | **NetBird DNS Endpoint** | `netbird.base.dpi.ait.ac.th.` | `base-mgmt` (Zone `dpi-base`) | 🟢 Resolving to `35.240.138.109` |
+| **NetBird Canonical Endpoint** | `netbird.dpi.ait.ac.th.` | `ait-brainlab-mgmt` (Zone `dpi-center`) | 🟢 Active CNAME with Let's Encrypt TLS |
 | **NetBird Host VM** | `base-vpn-vm` (`e2-micro`, ~$7.30/mo) | `base-vpn` (`asia-southeast1-b`) | 🟢 Running (2GB Swap active) |
-| **TLS Certificate** | Let's Encrypt (`netbird.base.dpi.ait.ac.th`) | Traefik v3 (`/opt/netbird/traefik/acme.json`) | 🟢 Valid through Dec 2026 |
+| **TLS Certificates** | Let's Encrypt (`netbird.base.*`, `netbird.dpi.*`) | Traefik v3 (`/opt/netbird/traefik/acme.json`) | 🟢 Valid through Dec 2026 |
 | **Docker Compose Stack** | 5 containers (Traefik, Dashboard, Signal, Mgmt, Relay) | `/opt/netbird` (`base-vpn-vm`) | 🟢 5/5 Up & Healthy |
 | **Automated State Backup** | `gs://base-dpi-ait-ac-th-tfstate/backups/netbird/` | GCS (`store.db`, `acme.json`) | 🟢 Active (6-hourly cron) |
 
