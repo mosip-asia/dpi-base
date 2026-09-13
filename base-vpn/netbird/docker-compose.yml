@@ -1,0 +1,161 @@
+# ==========================================================
+# 📡 DPI Center — NetBird Mesh VPN & Traefik v3 Edge Proxy
+# ==========================================================
+# This file serves as the canonical stack specification and is
+# monitored by GitHub Dependabot (package-ecosystem: docker-compose)
+# for automated major version update alerts.
+# ==========================================================
+
+services:
+  traefik:
+    image: traefik:v3.7
+    container_name: traefik
+    restart: unless-stopped
+    environment:
+      - DOCKER_API_VERSION=1.44
+      - TZ=Asia/Bangkok
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=dpi-vpn-net"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@dpi.ait.ac.th}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "/opt/netbird/traefik/acme.json:/etc/traefik/acme.json"
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/etc/timezone:/etc/timezone:ro"
+    networks:
+      - vpn-network
+
+  netbird-dashboard:
+    image: netbirdio/dashboard:v2.92.0
+    container_name: netbird-dashboard
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Bangkok
+      - NETBIRD_MGMT_API_ENDPOINT=https://${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}
+      - NETBIRD_MGMT_GRPC_API_ENDPOINT=https://${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}
+      - AUTH_AUTHORITY=https://accounts.google.com
+      - AUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
+      - AUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}
+      - AUTH_AUDIENCE=${GOOGLE_OAUTH_CLIENT_ID}
+      - AUTH_SUPPORTED_SCOPES=openid profile email
+      - AUTH_REDIRECT_URI=/auth
+      - AUTH_SILENT_REDIRECT_URI=/silent-auth
+      - NETBIRD_TOKEN_SOURCE=idToken
+      - NETBIRD_CSP=https://oauth2.googleapis.com https://www.googleapis.com https://accounts.google.com
+      - USE_AUTH0=false
+    labels:
+      - "traefik.enable=true"
+      # Base Domain Router
+      - "traefik.http.routers.netbird-dashboard.rule=Host(`${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}`)"
+      - "traefik.http.routers.netbird-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.netbird-dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.netbird-dashboard.priority=1"
+      - "traefik.http.services.netbird-dashboard.loadbalancer.server.port=80"
+      # Production Domain Router (Active once CNAME is configured)
+      - "traefik.http.routers.netbird-dashboard-prod.rule=Host(`${PROD_FQDN:-netbird.dpi.ait.ac.th}`)"
+      - "traefik.http.routers.netbird-dashboard-prod.entrypoints=websecure"
+      - "traefik.http.routers.netbird-dashboard-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.netbird-dashboard-prod.priority=1"
+      - "traefik.http.routers.netbird-dashboard-prod.service=netbird-dashboard"
+    networks:
+      - vpn-network
+
+  netbird-signal:
+    image: netbirdio/signal:0.78.1
+    container_name: netbird-signal
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Bangkok
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/etc/timezone:/etc/timezone:ro"
+    labels:
+      - "traefik.enable=true"
+      # Base Domain Router
+      - "traefik.http.routers.netbird-signal.rule=Host(`${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}`) && PathPrefix(`/signalexchange.SignalExchange/`)"
+      - "traefik.http.routers.netbird-signal.entrypoints=websecure"
+      - "traefik.http.routers.netbird-signal.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.netbird-signal.priority=100"
+      - "traefik.http.routers.netbird-signal.service=netbird-signal"
+      - "traefik.http.services.netbird-signal.loadbalancer.server.port=80"
+      - "traefik.http.services.netbird-signal.loadbalancer.server.scheme=h2c"
+      # Production Domain Router (Active once CNAME is configured)
+      - "traefik.http.routers.netbird-signal-prod.rule=Host(`${PROD_FQDN:-netbird.dpi.ait.ac.th}`) && PathPrefix(`/signalexchange.SignalExchange/`)"
+      - "traefik.http.routers.netbird-signal-prod.entrypoints=websecure"
+      - "traefik.http.routers.netbird-signal-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.netbird-signal-prod.priority=100"
+      - "traefik.http.routers.netbird-signal-prod.service=netbird-signal"
+    networks:
+      - vpn-network
+
+  netbird-management:
+    image: netbirdio/management:0.78.1
+    container_name: netbird-management
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Bangkok
+      - NB_SETUP_PAT_ENABLED=true
+    command: ["--config", "/etc/netbird/management.json", "--log-file", "console"]
+    volumes:
+      - "/opt/netbird/management.json:/etc/netbird/management.json"
+      - "/opt/netbird/data:/var/lib/netbird"
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/etc/timezone:/etc/timezone:ro"
+    labels:
+      - "traefik.enable=true"
+      # Base Domain Router
+      - "traefik.http.routers.netbird-mgmt.rule=Host(`${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}`) && (PathPrefix(`/api`) || PathPrefix(`/management.`) || PathPrefix(`/.well-known`) || PathPrefix(`/oauth2`) || PathPrefix(`/dex`))"
+      - "traefik.http.routers.netbird-mgmt.entrypoints=websecure"
+      - "traefik.http.routers.netbird-mgmt.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.netbird-mgmt.priority=10"
+      - "traefik.http.services.netbird-mgmt.loadbalancer.server.port=80"
+      - "traefik.http.services.netbird-mgmt.loadbalancer.server.scheme=h2c"
+      # Production Domain Router (Active once CNAME is configured)
+      - "traefik.http.routers.netbird-mgmt-prod.rule=Host(`${PROD_FQDN:-netbird.dpi.ait.ac.th}`) && (PathPrefix(`/api`) || PathPrefix(`/management.`) || PathPrefix(`/.well-known`) || PathPrefix(`/oauth2`) || PathPrefix(`/dex`))"
+      - "traefik.http.routers.netbird-mgmt-prod.entrypoints=websecure"
+      - "traefik.http.routers.netbird-mgmt-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.netbird-mgmt-prod.priority=10"
+      - "traefik.http.routers.netbird-mgmt-prod.service=netbird-mgmt"
+    networks:
+      - vpn-network
+
+  netbird-relay:
+    image: netbirdio/relay:0.78.1
+    container_name: netbird-relay
+    restart: unless-stopped
+    command:
+      - "relay"
+      - "--listen-address=:33080"
+      - "--exposed-address=rels://${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}:443/relay"
+      - "--auth-secret=${NETBIRD_RELAY_SECRET}"
+      - "--log-level=info"
+    labels:
+      - "traefik.enable=true"
+      # Base Domain Router
+      - "traefik.http.routers.netbird-relay.rule=Host(`${NETBIRD_FQDN:-netbird.base.dpi.ait.ac.th}`) && PathPrefix(`/relay`)"
+      - "traefik.http.routers.netbird-relay.entrypoints=websecure"
+      - "traefik.http.routers.netbird-relay.tls.certresolver=letsencrypt"
+      - "traefik.http.services.netbird-relay.loadbalancer.server.port=33080"
+      # Production Domain Router (Active once CNAME is configured)
+      - "traefik.http.routers.netbird-relay-prod.rule=Host(`${PROD_FQDN:-netbird.dpi.ait.ac.th}`) && PathPrefix(`/relay`)"
+      - "traefik.http.routers.netbird-relay-prod.entrypoints=websecure"
+      - "traefik.http.routers.netbird-relay-prod.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.netbird-relay-prod.service=netbird-relay"
+    networks:
+      - vpn-network
+
+networks:
+  vpn-network:
+    name: dpi-vpn-net

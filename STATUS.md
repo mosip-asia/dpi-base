@@ -1,8 +1,8 @@
 # DPI Center Base (`dpi-base`) — Current Situation & Status
 
 **Last Updated**: 2026-09-13  
-**Active Git Branch**: `feat/issue-3-foundation`  
-**Linked Pull Request**: [PR #6: feat: initialize foundation management plane (base-mgmt)](https://github.com/mosip-asia/dpi-base/pull/6)  
+**Active Git Branch**: `feat/issue-4-vpn`  
+**Linked Pull Request**: [PR #7: feat(vpn): [Phase 2] Deploy base-vpn infrastructure & NetBird Mesh VPN (Draft)](https://github.com/mosip-asia/dpi-base/pull/7)  
 **Target Organization**: `dpi.ait.ac.th` (Org ID: `350922776586`)  
 
 ---
@@ -15,8 +15,8 @@
 └─────────────────────────────────────────────────────────────────────────────────┘
   Phase 0: Cloud Organization & Identity Foundation      [🟢 COMPLETED]
   Phase 1: Foundation Management Plane (base-mgmt)       [🟢 COMPLETED]
-  Phase 2: Network Fabric Tier (base-vpn / NetBird)      [🔴 PLANNED]
-  Phase 3: Multi-Cluster Control Plane (dpi-kube-ops)    [🔴 PLANNED]
+  Phase 2: Network Fabric Tier (base-vpn / NetBird)      [🟢 COMPLETED]
+  Phase 3: Multi-Cluster Control Plane (base-kube-ops)   [🔴 PLANNED]
   Phase 4: Sovereign Workload Initiatives (MOSIP, DLMS)  [🔴 PLANNED]
 ```
 
@@ -57,27 +57,31 @@
 
 ---
 
-### Phase 2: Network Fabric Tier (`base-vpn`) (Planned)
+### Phase 2: Network Fabric Tier (`base-vpn`) (Closed / Verified Live)
 * **Lead**: `@akraradets`
 * **Tracking Issue**: [Issue #4](https://github.com/mosip-asia/dpi-base/issues/4)
+* **Active Branch**: `feat/issue-4-vpn`
+* **Pull Request**: [PR #7](https://github.com/mosip-asia/dpi-base/pull/7)
 
 | Task ID | Task Description | Target Resource | Status | Notes / Output |
 | :---: | :--- | :--- | :---: | :--- |
-| `2.1` | Create Project `base-vpn` | GCP Resource Manager | 🔴 Planned | Inside `base` folder, linked to base billing |
-| `2.2` | Provision NetBird Controller VM | Compute Engine (`e2-small`) | 🔴 Planned | ~$14/mo, 24/7 online, static external IP |
-| `2.3` | Configure NetBird Docker Services | `base-vpn/docker/` | 🔴 Planned | NetBird management, signal, and STUN/TURN (coturn) |
-| `2.4` | Configure NetBird OAuth SSO | Google OAuth2 Web Client | 🔴 Planned | Integrated with Google Identity with admin-approval workflow |
-| `2.5` | DNS Records in `ait-brainlab-mgmt` | `netbird.dpi.ait.ac.th`, `signal...` | 🔴 Planned | Pointing to static IP in `base-vpn` |
+| `2.1` | Create Project `base-vpn` & Link Billing | `base-vpn` (`945976338321`) | 🟢 Verified | Created via `prj-base-vpn.tf`, billing linked from Secret Manager, lien active |
+| `2.2` | Terraform Infrastructure & Cloud-Init | `base-vpn/terraform/` | 🟢 Verified | VM (`e2-micro`), regional static IP (`35.240.138.109`), zero-trust firewalls, 2GB swap |
+| `2.3` | Decoupled DNS Record | `base-mgmt` Cloud DNS zone | 🟢 Verified | `netbird.base.dpi.ait.ac.th` -> `35.240.138.109` active & resolving worldwide |
+| `2.4` | NetBird Docker Stack & Traefik v3 Proxy | `base-vpn/netbird/` | 🟢 Verified | Traefik v3, NetBird stack, and Dependabot major-only filter |
+| `2.5` | Zero-Downtime Stack Deployer & Hot Backup | `base-vpn/remote-deploy.sh` | 🟢 Verified | Live over IAP; all 5 containers Up; GCS hot snapshots verified |
+| `2.6` | NetBird OAuth SSO & Admin Approval | Google OAuth2 Web Client | 🟢 Verified Live | Secret Manager keys fetched by VM SA; Google OIDC auth enabled |
+| `2.7` | Canonical Production CNAME Pointer | Parent Zone `dpi-center` (`ait-brainlab-mgmt`) | 🟢 Verified Live | `netbird.dpi.ait.ac.th` CNAME $\rightarrow$ `netbird.base.dpi.ait.ac.th`; Let's Encrypt TLS active |
 
 ---
 
-### Phase 3: Multi-Cluster Control Plane (`dpi-kube-ops`) (Planned)
-* **Lead**: Nuttasit (`@nuttasit`)
+### Phase 3: Multi-Cluster Control Plane (`base-kube-ops`) (Planned)
+* **Lead**: Nuttasit (`@BossNP` / `@nuttasit`)
 * **Tracking Issue**: [Issue #5](https://github.com/mosip-asia/dpi-base/issues/5)
 
 | Task ID | Task Description | Target Resource | Status | Notes / Output |
 | :---: | :--- | :--- | :---: | :--- |
-| `3.1` | Create Project `dpi-kube-ops` | GCP Resource Manager | 🔴 Planned | Inside `base` folder, linked to base billing |
+| `3.1` | Create Project `base-kube-ops` | GCP Resource Manager | 🔴 Planned | Inside `base` folder, linked to base billing |
 | `3.2` | Provision Rancher Instance | Compute Engine (`e2-standard-4`) | 🔴 Planned | Configured with GCP Instance Schedule (saving ~65-75% compute) |
 | `3.3` | Deploy Central Observability | VictoriaMetrics & Grafana Loki | 🔴 Planned | Ultra-low overhead metrics and chunked log ingestion |
 | `3.4` | Connect to NetBird VPN Mesh | NetBird Client Setup Key | 🔴 Planned | Joins 100.64.0.0/16 overlay mesh for secure cluster communication |
@@ -107,13 +111,24 @@
 | **State Storage Bucket** | `gs://base-dpi-ait-ac-th-tfstate` | `base-mgmt` (`asia-southeast1`) | Active (Versioning ON) |
 | **Parent Authoritative DNS** | Zone `dpi-center` (Shard A) | `ait-brainlab-mgmt` | Active (Delegated from `ait.ac.th`) |
 | **Foundation DNS Subzone** | `base.dpi.ait.ac.th.` (Shard E) | `base-mgmt` | 🟢 Active & Resolving Worldwide |
+| **Network Fabric Project** | `base-vpn` (`945976338321`) | Folder `base` | 🟢 Active |
+| **VPN Regional Static IP** | `35.240.138.109` | `base-vpn` (`asia-southeast1`) | 🟢 Allocated & Attached |
+| **NetBird DNS Endpoint** | `netbird.base.dpi.ait.ac.th.` | `base-mgmt` (Zone `dpi-base`) | 🟢 Resolving to `35.240.138.109` |
+| **NetBird Canonical Endpoint** | `netbird.dpi.ait.ac.th.` | `ait-brainlab-mgmt` (Zone `dpi-center`) | 🟢 Active CNAME with Let's Encrypt TLS |
+| **NetBird Host VM** | `base-vpn-vm` (`e2-micro`, ~$7.30/mo) | `base-vpn` (`asia-southeast1-b`) | 🟢 Running (2GB Swap active) |
+| **TLS Certificates** | Let's Encrypt (`netbird.base.*`, `netbird.dpi.*`) | Traefik v3 (`/opt/netbird/traefik/acme.json`) | 🟢 Valid through Dec 2026 |
+| **Docker Compose Stack** | 5 containers (Traefik, Dashboard, Signal, Mgmt, Relay) | `/opt/netbird` (`base-vpn-vm`) | 🟢 5/5 Up & Healthy |
+| **Automated State Backup** | `gs://base-dpi-ait-ac-th-tfstate/backups/netbird/` | GCS (`store.db`, `acme.json`) | 🟢 Active (6-hourly cron) |
 
 ---
 
 ## 🎯 Immediate Next Actions
 
-1. **Merge Pull Request #6**:
-   - Merge `feat/issue-3-foundation` into `main` (Resolves Issue #3).
-2. **Kick off Phase 2 (`base-vpn`)**:
-   - Create branch `feat/issue-4-vpn` (linked to Issue #4).
-   - Provision NetBird WireGuard mesh VPN tier on `e2-small` instance.
+1. **Initial Admin Login**:
+   - Open [`https://netbird.base.dpi.ait.ac.th`](https://netbird.base.dpi.ait.ac.th) and authenticate with your `@dpi.ait.ac.th` or `@ait.asia` Google account.
+2. **Merge Pull Request #7**:
+   - Mark Draft PR #7 as Ready for Review (`gh pr ready`) and merge `feat/issue-4-vpn` into `main` (Resolves Issue #4).
+3. **Configure Optional Production CNAME**:
+   - Point `netbird.dpi.ait.ac.th` $\rightarrow$ `netbird.base.dpi.ait.ac.th` in `ait-brainlab-mgmt` when ready.
+4. **Kick off Phase 3 (`base-kube-ops`)**:
+   - Create branch `feat/issue-5-kube-ops` (linked to Issue #5) for Rancher & VictoriaMetrics / Loki observability plane.

@@ -58,21 +58,31 @@ AI assistants and documentation templates MUST strictly adhere to the DPI domain
 - **Local Org Admin Execution**: Seed bootstrapping (creating folders, linking billing accounts) must be executed locally by human Organization Administrators with 2FA, never delegated to high-privilege CI/CD service accounts.
 
 ### 6. Documentation Standard & Issue-Driven GitOps Workflow
-- **The Consolidated 3-Document Standard**:
-  To prevent documentation drift and fragmented sprawling files, all repository documentation is strictly consolidated into three canonical files:
-  1. **`README.md`**: What the repo is for (purpose, decoupled architecture, platform vs. sovereign domains, core projects, IAM governance, and repo layout).
+- **The Consolidated 4-Document Standard**:
+  To prevent documentation drift and fragmented sprawling files, all repository documentation is strictly consolidated into four canonical files:
+  1. **`README.md`**: What the repo is for (purpose, decoupled architecture, platform vs. sovereign domains, core projects, IAM governance, quickstart developer setup, and repo layout).
   2. **`STATUS.md`**: Current situation of the repo (phase roadmap 0–4, live asset inventory, master task tracking checklist, and immediate next steps).
-  3. **`docs/sop.md`**: Unified Standard Operating Procedure runbook covering:
-     - Part 1: Provisioning a New Sovereign Domain (Landing Zone: billing setup, bootstrap script, Terraform, parent DNS handshake).
-     - Part 2: Provisioning a New Workload Project (naming `<domain>-<workload>`, folder IAM inheritance, NetBird enrollment).
-     - Part 3: Base Platform Operations (3-tier DNS policy, Terraform lifecycle, OAuth SSO).
-  - *Anti-Sprawl Rule*: AI assistants must NEVER create fragmented markdown files in nested `docs/` folders. All documentation updates must directly update `README.md`, `STATUS.md`, or `docs/sop.md`.
+  3. **`docs/sop-domain-mgmt.md`**: Sovereign Domain Landing Zone & Management Plane Runbook (Grant billing setup, seed bootstrap, `<domain>-mgmt`, Secret Manager integration, parent DNS handshake, and `prj-*.tf` project container envelopes).
+  4. **`docs/sop-workload.md`**: Workload Project & Compute Lifecycle Runbook (Workload naming `<domain>-<workload>`, workspace setup via `.env`, compute provisioning in `<domain>-<workload>/terraform/`, decoupled DNS records, and NetBird mesh VPN joining).
+
+  - *Anti-Sprawl Rule*: AI assistants must NEVER create fragmented markdown files in nested `docs/` folders. All documentation updates must directly update `README.md`, `STATUS.md`, `docs/sop-domain-mgmt.md`, or `docs/sop-workload.md`.
+
 - **Billing Account Naming Invariant**:
   All Google Cloud Billing Accounts must strictly adhere to the naming format: `DPI Center - <Team or Grant Name>` (e.g. `DPI Center - Base Platform`, `DPI Center - MOSIP Asia Grant`). This ensures that official Google Cloud PDF tax invoices and prepaid top-up receipts match grant budget lines verbatim for institutional university reimbursement.
-- **GitHub Issue-Driven Development**:
-  - Feature branches must always follow: `feat/issue-<number>-<description>` or `fix/issue-<number>-<description>`.
-  - Pull Requests and commit messages must include linking keywords (`Closes #<number>` or `Resolves #<number>`) so issues and project boards update automatically upon merge.
-  - Task completion checklists in `STATUS.md` must be kept in lockstep with GitHub Issues.
+- **Issue-Driven vs. PR-Driven GitOps Standard**:
+  1. **Separation of Concerns (Issue vs. PR)**:
+     - **GitHub Issue = Specification & Requirements Contract ("WHAT & WHY")**: Defines the problem statement, architecture decisions, acceptance criteria / definition of done, scope boundaries, and high-level milestones. Avoid turning the issue into a micro-commit log or transient scratchpad.
+     - **Pull Request = Implementation & Verification Artifact ("HOW & PROOF")**: Created on a dedicated feature branch (`feat/issue-<number>-<description>` or `fix/issue-<number>-<description>`). Open a **Draft PR on Day 1** as soon as work begins. The PR description contains the implementation approach, atomic commit history with verification proofs/plans, and explicit issue closing keywords (`Closes #<number>`).
+  2. **Draft PR on Day 1**:
+     - As soon as a branch is created and initial scaffolding begins, push and open a Draft PR immediately (`gh pr create --draft`).
+     - Enables continuous asynchronous collaboration, transparent progress visibility, peer review of in-flight design, and prevents duplicate work across team members and AI assistants.
+     - When all tasks and acceptance criteria are fulfilled, convert the PR to Ready for Review (`gh pr ready`).
+  3. **Atomic Commits & Plan-Verification Rule**:
+     - Keep commits atomic and logically self-contained using Conventional Commits (`feat(...)`, `fix(...)`, `docs(...)`, `chore(...)`).
+     - Major changes (e.g., Terraform infrastructure, security configurations, network topologies) should be verified with dry-run/plan execution logs and diff summaries documented in commit messages or PR comments.
+  4. **Task Checklist Synchronization**:
+     - Maintain strict alignment between the GitHub Issue acceptance criteria, the master task tracking checklist in `STATUS.md`, and the PR implementation checklist. Task completion checklists in `STATUS.md` must be kept in lockstep with GitHub Issues.
+
 
 ---
 
@@ -87,5 +97,10 @@ AI assistants and documentation templates MUST strictly adhere to the DPI domain
 8. **Per-Project Least Privilege**: Workload contributors, researchers, and developers MUST ONLY receive access at the Project level (e.g. `roles/editor`), never at the Organization level, to prevent uncontrolled resource creation.
 9. **Billing Protection Model**: Protect against unintended cloud spend by maintaining a prepaid credit balance via manual early top-ups ("Make a payment") and configuring budget threshold alerts before launching new workloads.
 10. **Public Billing Privacy**: In public repositories, never commit real GCP Billing Account IDs in code, documentation, or `.env.example`. Always use masked placeholders (`01XXXX-XXXXXX-XXXXXX`).
+11. **Standard VM Security, Access & Secrets Invariant**:
+    - **Zero Static SSH Keys**: All Compute Engine VMs must enforce `enable-oslogin = "TRUE"` and restrict SSH (port 22) strictly to Google Identity-Aware Proxy (IAP: `35.235.240.0/20`). Never bake static SSH public keys into `cloud-init` or instance metadata. Operators authenticate via their individual Google accounts (`@ait.asia`) with personal 2FA.
+    - **Zero Plaintext Secrets in Cloud-Init**: Never store passwords, OAuth credentials, API keys, or private keys inside `cloud-init` user-data (which is stored in plaintext metadata). Attach a dedicated service account with granular `roles/secretmanager.secretAccessor` on `<domain>-mgmt` Secret Manager, pulling credentials into local root-owned mode `0600` files at runtime.
+    - **Decoupled Compute vs. Application Lifecycle**: `cloud-init` strictly provisions OS packages, Docker CE, directories, and systemd units. Container workloads (e.g. `docker-compose.yml`) are deployed and updated independently over secure IAP to eliminate destructive VM recreations on version bumps.
+
 
 

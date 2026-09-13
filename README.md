@@ -70,6 +70,38 @@ We enforce a strict separation between break-glass recovery and daily operationa
 
 ---
 
+## 🚀 Quickstart: Developer Workspace Setup
+
+When onboarding as a contributor or cloning this repository, follow these steps to configure your local environment:
+
+### 1. Authenticate with Google Cloud
+Ensure your local `gcloud` CLI and Application Default Credentials (ADC) are authenticated with your authorized operating identity (e.g. `@ait.asia`):
+```bash
+gcloud auth login
+gcloud auth application-default login
+```
+
+### 2. Configure Local Environment (`.env`)
+Copy the environment template:
+```bash
+cp .env.example .env
+```
+* **For Workload Developers & Contributors**:  
+  You can leave `BILLING_ACCOUNT_ID` blank (`BILLING_ACCOUNT_ID=""`). Child project envelopes (`prj-*.tf`) automatically query the billing account dynamically from GCP Secret Manager at runtime, so you do not need the billing ID on disk.
+* **For Management Plane Operators (Day-0 Bootstrap, Relinking Billing, or Secret Management)**:  
+  If you are an authorized administrator managing `<domain>-mgmt`, manually retrieve the billing ID from Secret Manager and set it in `.env`:
+  ```bash
+  gcloud secrets versions access latest --secret=billing-account-id --project=base-mgmt
+  ```
+
+### 3. Verify Configuration
+Run pre-flight checks to ensure your workstation and IAM permissions are ready:
+```bash
+./scripts/check_env.sh
+```
+
+---
+
 ## 📁 Repository Directory Structure
 
 ```text
@@ -85,17 +117,21 @@ dpi-base/
 │   └── bootstrap_domain.sh        # Seed bootstrap with --plan & idempotent apply
 │
 ├── docs/                          # Standard Operating Procedures (Runbooks)
-│   └── sop.md                     # Master SOP: New Domain, New Project, Base Infra
+
+│   ├── sop-domain-mgmt.md         # Domain Landing Zone & Management Plane Runbook
+│   └── sop-workload.md            # Workload Project & Compute Lifecycle Runbook
 │
 ├── base-mgmt/                     # GCP Project: base-mgmt (Cloud DNS & Governance)
 │   ├── oauth_setup.md             # Google OAuth2 / OIDC console setup SOP
 │   └── terraform/                 # Foundation Cloud DNS, IAM, Secrets, GCS State
 │
 ├── base-vpn/                      # GCP Project: base-vpn (NetBird Mesh VPN)
-│   ├── terraform/                 # e2-small VM, static IP, firewall rules
-│   └── docker/                    # NetBird docker-compose & reverse proxy configs
+│   ├── remote-deploy.sh           # IAP stack deployer & updater
+│   ├── ssh.sh                     # IAP SSH connector directly into 'ubuntu'
+│   ├── netbird/                   # Traefik v3 + NetBird compose manifests & backup
+│   └── terraform/                 # e2-micro VM, static IP, firewall rules, cloud-init
 │
-└── dpi-kube-ops/                  # GCP Project: dpi-kube-ops (Rancher & Observability)
+└── base-kube-ops/                 # GCP Project: base-kube-ops (Rancher & Observability)
     ├── terraform/                 # e2-standard-4 VM, Instance Schedule, K3s startup
     └── helm/                      # Rancher Community, VictoriaMetrics & Grafana values
 ```
@@ -105,5 +141,7 @@ dpi-base/
 ## 🔗 Quick Navigation
 
 * 🚦 **Current Situation & Deployment Progress**: See [`STATUS.md`](STATUS.md).
-* 📖 **How to Add a New Domain, Project, or Infra**: Follow [`docs/sop.md`](docs/sop.md).
+* 🏛️ **How to Provision a New Domain Landing Zone**: Follow [`docs/sop-domain-mgmt.md`](docs/sop-domain-mgmt.md).
+* 💻 **How to Deploy a Workload Project**: Follow [`docs/sop-workload.md`](docs/sop-workload.md).
 * 🎯 **GitHub Milestones & Tracking**: [GitHub Epic #1](https://github.com/mosip-asia/dpi-base/issues/1).
+

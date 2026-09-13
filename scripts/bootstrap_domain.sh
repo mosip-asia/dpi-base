@@ -422,7 +422,23 @@ if [[ "${PLAN_MODE}" == "false" ]]; then
   echo -e "    ${COLOR_GREEN}[VERIFIED]${COLOR_RESET} Object versioning active on gs://${BUCKET_NAME}."
 fi
 
-# --- 9. Format Admin & Member HCL Arrays ---
+# --- 9. Seed Secret Manager billing-account-id ---
+if [[ -n "${BILLING_ACCOUNT_ID}" && ! "${BILLING_ACCOUNT_ID}" =~ XXXX ]]; then
+  if [[ "${PLAN_MODE}" == "true" ]]; then
+    echo "==> [PLAN] Would seed secret 'billing-account-id' in Secret Manager (${PROJECT_ID})."
+  else
+    echo "==> Seeding 'billing-account-id' in Secret Manager..."
+    gcloud services enable secretmanager.googleapis.com --project="${PROJECT_ID}" >/dev/null 2>&1 || true
+    if ! gcloud secrets describe billing-account-id --project="${PROJECT_ID}" >/dev/null 2>&1; then
+      gcloud secrets create billing-account-id --project="${PROJECT_ID}" --replication-policy=automatic >/dev/null 2>&1 || true
+    fi
+    echo -n "${BILLING_ACCOUNT_ID}" | gcloud secrets versions add billing-account-id --project="${PROJECT_ID}" --data-file=- >/dev/null 2>&1 || true
+    echo -e "    ${COLOR_GREEN}[SEEDED]${COLOR_RESET} Secret 'billing-account-id' in project ${PROJECT_ID}."
+  fi
+fi
+
+# --- 10. Format Admin & Member HCL Arrays ---
+
 format_hcl_array() {
   local csv="${1:-}"
   local formatted=""
@@ -463,6 +479,8 @@ ${ADMINS_HCL}]
 
 folder_members = [
 ${MEMBERS_HCL}]
+
+billing_account_id = "${BILLING_ACCOUNT_ID}"
 EOF
 )
 

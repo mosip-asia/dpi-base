@@ -1,0 +1,62 @@
+#cloud-config
+
+package_update: true
+packages:
+  - docker.io
+  - docker-compose-v2
+  - sqlite3
+  - curl
+  - jq
+
+timezone: Asia/Bangkok
+
+# 2 GB swapfile to ensure e2-micro (1 GB RAM) operates reliably without OOM
+swap:
+  filename: /swapfile
+  size: 2147483648
+  maxsize: 2147483648
+
+
+write_files:
+  - path: /opt/netbird/traefik/acme.json
+    permissions: '0600'
+    content: ''
+
+  - path: /etc/systemd/system/dpi-vpn.service
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=DPI Center NetBird VPN Fabric (Docker Compose)
+      Requires=docker.service
+      After=docker.service network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      WorkingDirectory=/opt/netbird
+      ExecStart=/usr/bin/docker compose up -d --remove-orphans
+      ExecStop=/usr/bin/docker compose down
+      ExecStopPost=/bin/bash -c "if [ -x /opt/netbird/backup_to_gcs.sh ]; then /opt/netbird/backup_to_gcs.sh; fi"
+      TimeoutStartSec=300
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  # 1. Enable and start Docker
+  - systemctl enable docker
+  - systemctl start docker
+  - usermod -aG docker ubuntu
+
+  # 2. Local loopback to bypass GCP hairpin NAT for Traefik
+  - echo "127.0.0.1 ${netbird_fqdn}" >> /etc/hosts
+
+  # 3. Create required directory tree owned by ubuntu:docker
+  - mkdir -p /opt/netbird/data /opt/netbird/traefik
+  - chown -R ubuntu:docker /opt/netbird
+  - chmod 600 /opt/netbird/traefik/acme.json
+
+  # 4. Enable dpi-vpn service (auto-starts containers on reboot)
+  - systemctl daemon-reload
+  - systemctl enable dpi-vpn.service

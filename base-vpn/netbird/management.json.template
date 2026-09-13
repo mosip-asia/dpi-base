@@ -1,0 +1,45 @@
+{
+  "DataDir": "/var/lib/netbird",
+  "Stuns": [
+    {"Proto": "udp", "URI": "stun:stun.l.google.com:19302"},
+    {"Proto": "udp", "URI": "stun:stun1.l.google.com:19302"},
+    {"Proto": "udp", "URI": "stun:stun2.l.google.com:19302"}
+  ],
+  "HttpConfig": {
+    "AuthClientID": "$GOOGLE_OAUTH_CLIENT_ID",
+    "AuthAudience": "$GOOGLE_OAUTH_CLIENT_ID",
+    "AuthAuthority": "https://accounts.google.com",
+    "AuthIssuer": "https://accounts.google.com",
+    "AuthKeysLocation": "https://www.googleapis.com/oauth2/v3/certs",
+    "OIDCConfigEndpoint": "https://accounts.google.com/.well-known/openid-configuration"
+  },
+  "PKCEAuthorizationFlow": {
+    "ProviderConfig": {
+      "ClientID": "$GOOGLE_OAUTH_CLIENT_ID",
+      "ClientSecret": "$GOOGLE_OAUTH_CLIENT_SECRET",
+      "Audience": "$GOOGLE_OAUTH_CLIENT_ID",
+      "TokenEndpoint": "https://oauth2.googleapis.com/token",
+      "AuthorizationEndpoint": "https://accounts.google.com/o/oauth2/v2/auth",
+      "Scope": "openid profile email",
+      "UseIDToken": true,
+      "RedirectURLs": [
+        "http://localhost:53000"
+      ]
+    }
+  },
+  "IdpManagerConfig": null,
+  "SingleAccountModeDomain": "$SINGLE_ACCOUNT_MODE_DOMAIN",
+  "Datadir": "/var/lib/netbird",
+  "Signal": {
+    "URI": "$NETBIRD_FQDN:443",
+    "Proto": "https"
+  },
+  "Relay": {
+    "Addresses": ["rels://$NETBIRD_FQDN:443/relay"],
+    "CredentialsTTL": "24h0m0s",
+    "Secret": "$NETBIRD_RELAY_SECRET"
+  },
+  "EmbeddedIdP": {
+    "Enabled": false
+  }
+}
