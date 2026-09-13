@@ -61,7 +61,49 @@ Each grant maintains its own dedicated Google Cloud Billing Account for clean fi
 
 ## 🚀 Step 2: Seed Bootstrap Configuration
 
-The seed bootstrap script automates folder creation, anchor project setup, billing linkage, and state bucket provisioning.
+The seed bootstrap script (`scripts/bootstrap_domain.sh`) automates folder creation, anchor project setup, billing linkage, state bucket provisioning, and secret seeding.
+
+### 📋 Bootstrap Input / Output Contract
+
+Before running the bootstrap, understand exactly what inputs are consumed and what cloud assets and local artifacts are produced:
+
+#### 📥 Inputs Required
+
+| Input Category | Variable / Prerequisite | Description & Requirements |
+| :--- | :--- | :--- |
+| **Authentication** | **Active `gcloud` Account** | Authenticated as an Org Admin (e.g. `akraradet@ait.asia`) via `gcloud auth login`. |
+| | **ADC Credentials** | Local Application Default Credentials via `gcloud auth application-default login`. |
+| | **IAM Permissions** | `roles/resourcemanager.organizationAdmin` (or `folderCreator` + `projectCreator`) on Org `350922776586`. |
+| | **Billing Permission** | `roles/billing.admin` or `roles/billing.user` on the target billing account. |
+| **Domain Identity** | **`DOMAIN_NAME`** | Unique domain slug (e.g. `mosip-asia`). Lowercase alphanumeric + hyphens, max 24 characters. |
+| **Billing** | **`BILLING_ACCOUNT_ID`** | Active GCP Billing Account ID (`01XXXX-XXXXXX-XXXXXX`) created in Step 1. |
+| **Hierarchy (Optional)**| **`ORGANIZATION_ID`** | Target Google Cloud Org ID (defaults to `350922776586` for `dpi.ait.ac.th`). |
+| | **`PARENT_DOMAIN`** | Parent DNS apex (defaults to `dpi.ait.ac.th`). |
+| | **`REGION`** | Primary GCP region for storage and compute (defaults to `asia-southeast1` Singapore). |
+| | **`FOLDER_ADMINS`** | Comma-separated admin emails granted Folder Admin/Editor (`akraradet@ait.asia,nuttasit@ait.asia`). |
+| | **`FOLDER_MEMBERS`** | (Optional) Comma-separated member emails granted Folder Viewer. |
+| | **`STATE_BUCKET`** | (Optional) Custom bucket name override (defaults to `gs://<domain>-dpi-ait-ac-th-tfstate`). |
+
+---
+
+#### 📤 Outputs & Produced Assets
+
+| Output Category | Asset Produced | Details & Verification |
+| :--- | :--- | :--- |
+| **Cloud Hierarchy** | **📁 GCP Folder** | `folders/<id>` named `<domain>` under Org `350922776586`. Serves as the IAM and billing boundary. |
+| | **📦 Anchor Project** | Project `<domain>-mgmt` created inside the `<domain>` folder. |
+| | **💳 Billing Association** | `<domain>-mgmt` permanently linked to `BILLING_ACCOUNT_ID`. |
+| **Core Cloud APIs** | **GCP Service APIs** | Enabled on `<domain>-mgmt`: `cloudresourcemanager`, `serviceusage`, `storage`, `secretmanager`. |
+| **Terraform State** | **🪣 GCS State Bucket** | `gs://<domain>-dpi-ait-ac-th-tfstate` in `asia-southeast1` with **Object Versioning ON**. |
+| **Secret Vault** | **🔑 Secret Manager Safe** | Secret `billing-account-id` created in project `<domain>-mgmt`. |
+| | **🔒 Secret Version 1** | Seeded with authoritative `BILLING_ACCOUNT_ID` (permanent, read-only for future Terraform). |
+| **Local Workspace** | **📁 Code Directory** | `<domain>-mgmt/terraform/` prepared for deployment. |
+| | **📄 `terraform.tfvars`** | Auto-generated `<domain>-mgmt/terraform/terraform.tfvars` with folder ID, domain, and admin arrays. |
+
+---
+
+### 🛠️ Bootstrap Execution Steps
+
 
 1. **Prepare `.env` at Repository Root**:
    ```bash
