@@ -226,6 +226,13 @@ else
       log_warn "GCP Org Access" "Could not describe Org ${ORGANIZATION_ID}. Ensure account has Organization Viewer/Admin."
     fi
 
+    # Check Folder Access in Org
+    if gcloud resource-manager folders list --organization="${ORGANIZATION_ID}" --limit=1 >/dev/null 2>&1; then
+      log_ok "GCP Folder Access" "Verified permission to list/manage folders in Org"
+    else
+      log_warn "GCP Folder Access" "Cannot list folders in Org ${ORGANIZATION_ID}. Ensure account has 'roles/resourcemanager.folderCreator' or 'roles/resourcemanager.organizationAdmin'."
+    fi
+
     # Check Billing Account Access (only if not placeholder)
     if [[ ! "${BILLING_ACCOUNT_ID}" =~ XXXX && -n "${BILLING_ACCOUNT_ID}" ]]; then
       if gcloud billing accounts describe "${BILLING_ACCOUNT_ID}" >/dev/null 2>&1; then

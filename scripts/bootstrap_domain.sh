@@ -284,6 +284,9 @@ else
       --folder="${FOLDER_NUMERIC_ID}" \
       --name="DPI ${DOMAIN_NAME} Management"
     echo -e "    ${COLOR_GREEN}[CREATED]${COLOR_RESET} Project '${PROJECT_ID}'."
+    PROJECT_EXISTS=true
+    echo "    Waiting 5s for GCP Resource Manager propagation..."
+    sleep 5
   fi
 fi
 
@@ -308,8 +311,26 @@ else
     plan_action "LINK" "Project '${PROJECT_ID}' to Billing Account ${MASKED_BILLING}"
   else
     echo "    Linking Billing Account ${MASKED_BILLING} to '${PROJECT_ID}'..."
-    gcloud billing projects link "${PROJECT_ID}" --billing-account="${BILLING_ACCOUNT_ID}"
-    echo -e "    ${COLOR_GREEN}[LINKED]${COLOR_RESET} Billing account linked successfully."
+    LINK_SUCCESS=false
+    MAX_RETRIES=5
+    for ((attempt=1; attempt<=MAX_RETRIES; attempt++)); do
+      if gcloud billing projects link "${PROJECT_ID}" --billing-account="${BILLING_ACCOUNT_ID}" >/dev/null 2>&1; then
+        LINK_SUCCESS=true
+        break
+      fi
+      if [[ ${attempt} -lt ${MAX_RETRIES} ]]; then
+        echo "    Waiting for project propagation in Billing API (attempt ${attempt}/${MAX_RETRIES}, retrying in 5s)..."
+        sleep 5
+      fi
+    done
+
+    if [[ "${LINK_SUCCESS}" == "true" ]]; then
+      echo -e "    ${COLOR_GREEN}[LINKED]${COLOR_RESET} Billing account linked successfully."
+    else
+      echo -e "    ${COLOR_YELLOW}[RETRYING]${COLOR_RESET} Performing final link attempt to capture detailed response..."
+      gcloud billing projects link "${PROJECT_ID}" --billing-account="${BILLING_ACCOUNT_ID}"
+      echo -e "    ${COLOR_GREEN}[LINKED]${COLOR_RESET} Billing account linked successfully."
+    fi
   fi
 fi
 
@@ -326,8 +347,23 @@ if [[ "${PLAN_MODE}" == "true" ]]; then
   fi
 else
   echo "    Ensuring core APIs are enabled on '${PROJECT_ID}'..."
-  gcloud services enable "${SEED_APIS[@]}" --project="${PROJECT_ID}"
-  echo -e "    ${COLOR_GREEN}[ENABLED]${COLOR_RESET} Core APIs verified."
+  API_SUCCESS=false
+  for ((attempt=1; attempt<=3; attempt++)); do
+    if gcloud services enable "${SEED_APIS[@]}" --project="${PROJECT_ID}" >/dev/null 2>&1; then
+      API_SUCCESS=true
+      break
+    fi
+    if [[ ${attempt} -lt 3 ]]; then
+      echo "    Waiting for serviceusage API availability (attempt ${attempt}/3)..."
+      sleep 5
+    fi
+  done
+  if [[ "${API_SUCCESS}" == "true" ]]; then
+    echo -e "    ${COLOR_GREEN}[ENABLED]${COLOR_RESET} Core APIs verified."
+  else
+    gcloud services enable "${SEED_APIS[@]}" --project="${PROJECT_ID}"
+    echo -e "    ${COLOR_GREEN}[ENABLED]${COLOR_RESET} Core APIs verified."
+  fi
 fi
 
 # --- 8. Check / Plan / Create Remote State Bucket ---
