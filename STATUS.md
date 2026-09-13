@@ -64,11 +64,11 @@
 | Task ID | Task Description | Target Resource | Status | Notes / Output |
 | :---: | :--- | :--- | :--- | :--- |
 | `2.1` | Create Project `base-vpn` & Link Billing | `base-vpn` (`945976338321`) | 🟢 Verified | Created via `prj-base-vpn.tf`, billing linked from Secret Manager, lien active |
-| `2.2` | Terraform Infrastructure & Cloud-Init | `base-vpn/terraform/` | 🟡 Scaffolding Ready | VM (`e2-small`), regional static IP, zero-trust firewalls, minimal Docker CE cloud-init |
-| `2.3` | Decoupled DNS Record | `base-mgmt` Cloud DNS zone | 🟡 Scaffolding Ready | `netbird.base.dpi.ait.ac.th` -> static IP in zone `dpi-base` |
-| `2.4` | NetBird Docker Stack & Traefik v3 Proxy | `base-vpn/docker/` | 🟡 Scaffolding Ready | Traefik v3, NetBird stack, and Dependabot major-only filter |
-| `2.5` | Zero-Downtime Stack Deployer | `base-vpn/deploy.sh` | 🟡 Scaffolding Ready | Push deploy over IAP tunnel, auto-renders `.env` & `management.json` |
-| `2.6` | NetBird OAuth SSO & Admin Approval | Google OAuth2 Web Client | 🔴 Planned | Assisted via `./base-vpn/update_oauth.sh` once credentials generated |
+| `2.2` | Terraform Infrastructure & Cloud-Init | `base-vpn/terraform/` | 🟢 Verified | VM (`e2-micro`), regional static IP (`35.240.138.109`), zero-trust firewalls, 2GB swap |
+| `2.3` | Decoupled DNS Record | `base-mgmt` Cloud DNS zone | 🟢 Verified | `netbird.base.dpi.ait.ac.th` -> `35.240.138.109` active & resolving worldwide |
+| `2.4` | NetBird Docker Stack & Traefik v3 Proxy | `base-vpn/docker/` | 🟢 Verified | Traefik v3, NetBird stack, and Dependabot major-only filter |
+| `2.5` | Zero-Downtime Stack Deployer | `base-vpn/deploy.sh` | 🟡 Ready to Deploy | Push deploy over IAP tunnel, auto-renders `.env` & `management.json` |
+| `2.6` | NetBird OAuth SSO & Admin Approval | Google OAuth2 Web Client | 🔴 In Progress | Ready for Client ID & Secret injection via `./base-vpn/update_oauth.sh` |
 
 ---
 
@@ -110,6 +110,10 @@
 | **State Storage Bucket** | `gs://base-dpi-ait-ac-th-tfstate` | `base-mgmt` (`asia-southeast1`) | Active (Versioning ON) |
 | **Parent Authoritative DNS** | Zone `dpi-center` (Shard A) | `ait-brainlab-mgmt` | Active (Delegated from `ait.ac.th`) |
 | **Foundation DNS Subzone** | `base.dpi.ait.ac.th.` (Shard E) | `base-mgmt` | 🟢 Active & Resolving Worldwide |
+| **Network Fabric Project** | `base-vpn` (`945976338321`) | Folder `base` | 🟢 Active |
+| **VPN Regional Static IP** | `35.240.138.109` | `base-vpn` (`asia-southeast1`) | 🟢 Allocated & Attached |
+| **NetBird DNS Endpoint** | `netbird.base.dpi.ait.ac.th.` | `base-mgmt` (Zone `dpi-base`) | 🟢 Resolving to `35.240.138.109` |
+| **NetBird Host VM** | `base-vpn-vm` (`e2-micro`, ~$7.30/mo) | `base-vpn` (`asia-southeast1-b`) | 🟢 Running |
 
 ---
 
