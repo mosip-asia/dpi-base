@@ -126,8 +126,10 @@ dpi-base/
 │   └── terraform/                 # Foundation Cloud DNS, IAM, Secrets, GCS State
 │
 ├── base-vpn/                      # GCP Project: base-vpn (NetBird Mesh VPN)
-│   ├── terraform/                 # e2-small VM, static IP, firewall rules
-│   └── docker/                    # NetBird docker-compose & reverse proxy configs
+│   ├── remote-deploy.sh           # IAP stack deployer & updater
+│   ├── ssh.sh                     # IAP SSH connector directly into 'ubuntu'
+│   ├── netbird/                   # Traefik v3 + NetBird compose manifests & backup
+│   └── terraform/                 # e2-micro VM, static IP, firewall rules, cloud-init
 │
 └── base-kube-ops/                 # GCP Project: base-kube-ops (Rancher & Observability)
     ├── terraform/                 # e2-standard-4 VM, Instance Schedule, K3s startup

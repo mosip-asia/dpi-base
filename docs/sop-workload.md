@@ -197,11 +197,11 @@ resource "google_dns_record_set" "service" {
 
 All downstream nodes join the private NetBird WireGuard overlay mesh (`100.64.0.0/16`):
 
-1. Obtain a **Setup Key** from NetBird Admin Console (`https://netbird.base.dpi.ait.ac.th`).
+1. Obtain a **Setup Key** from NetBird Admin Console ([`https://netbird.dpi.ait.ac.th`](https://netbird.dpi.ait.ac.th) or [`https://netbird.base.dpi.ait.ac.th`](https://netbird.base.dpi.ait.ac.th)).
 2. Run on the VM (or add to `cloud-init` / user-data startup script):
    ```bash
    curl -fsSL https://pkgs.netbird.io/install.sh | sh
-   netbird up --management-url https://netbird.base.dpi.ait.ac.th:443 --setup-key <SETUP_KEY>
+   netbird up --management-url https://netbird.dpi.ait.ac.th:443 --setup-key <SETUP_KEY>
    ```
 3. Verify connection:
    ```bash

@@ -8,12 +8,14 @@
 ## 🏗 Architecture
 * **Core Service**: NetBird Mesh VPN Control Plane (Management API, Signal service, Relay service, Dashboard UI)
 * **Edge Proxy**: Traefik v3 with automated Let's Encrypt SSL (`acme.json` via HTTP-01 challenge)
-* **Compute Host**: `e2-small` (2 vCPU, 2 GB RAM, 30 GB `pd-balanced` disk) running Ubuntu 24.04 LTS
-* **Provisioning Method**: Declarative `cloud-init` (`#cloud-config`) via `user-data`
-* **Operating Mode**: **24/7 Always-On** (~$14/month)
-* **Public Static IP**: Attached for WebRTC signaling and Traefik edge routing
-* **DNS FQDN**: `netbird.base.dpi.ait.ac.th` (anchored in `base-mgmt` Cloud DNS zone `dpi-base`)
-* **Persistence & Hydration**: SQLite database (`store.db`) auto-hydrated from `gs://base-dpi-ait-ac-th-tfstate/backups/netbird/store.db` on boot, with 6-hourly automated snapshots and graceful shutdown backup
+* **Compute Host**: `e2-micro` (2 vCPU, 1 GB RAM + 2 GB Swap memory protection, 30 GB `pd-balanced` disk) running Ubuntu 24.04 LTS
+* **Provisioning Method**: Declarative `cloud-init` (`#cloud-config`) via `user-data` for OS packages, Docker CE, and swap
+* **Operating Mode**: **24/7 Always-On** (~$8.18/month)
+* **Public Static IP**: Attached (`35.240.138.109`) for WebRTC signaling and Traefik edge routing
+* **DNS FQDNs**:
+  * **Canonical Production**: `netbird.dpi.ait.ac.th` (CNAME in parent zone `dpi-center`)
+  * **Base Infrastructure**: `netbird.base.dpi.ait.ac.th` (A record in `base-mgmt` zone `dpi-base`)
+* **Persistence & Hydration**: SQLite database (`store.db`) and Traefik TLS certificates (`acme.json`) backed up to `gs://base-dpi-ait-ac-th-tfstate/backups/netbird/` with automated 6-hourly cron and systemd shutdown hook
 
 ---
 
@@ -105,7 +107,7 @@ Connect securely to the VPN VM without exposing port 22 to the public internet:
 # Interactive shell session
 ./base-vpn/ssh.sh
 
-# Run remote commands directly
-./base-vpn/ssh.sh "cd /opt/netbird && sudo docker compose ps"
-./base-vpn/ssh.sh "sudo docker logs traefik --tail 50"
+# Run remote commands directly (no sudo needed for ubuntu user)
+./base-vpn/ssh.sh "cd /opt/netbird && docker compose ps"
+./base-vpn/ssh.sh "cd /opt/netbird && docker compose logs traefik --tail 50"
 ```
