@@ -2,7 +2,7 @@
 
 **Last Updated**: 2026-09-13  
 **Active Git Branch**: `feat/issue-4-vpn`  
-**Linked Pull Request**: [PR #7: feat(vpn): [Phase 2] Deploy base-vpn infrastructure & NetBird Mesh VPN (Draft)](https://github.com/mosip-asia/dpi-base/pull/) *(Draft PR to be linked)*  
+**Linked Pull Request**: [PR #7: feat(vpn): [Phase 2] Deploy base-vpn infrastructure & NetBird Mesh VPN (Draft)](https://github.com/mosip-asia/dpi-base/pull/7)  
 **Target Organization**: `dpi.ait.ac.th` (Org ID: `350922776586`)  
 
 ---
