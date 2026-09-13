@@ -79,7 +79,17 @@ gcloud compute ssh "$VM_NAME" --project="$VPN_PROJECT" --zone="$ZONE" --tunnel-t
   sudo mv /tmp/management.json $REMOTE_DIR/netbird/management.json
   sudo chmod 600 $REMOTE_DIR/.env $REMOTE_DIR/netbird/management.json
   sudo chown root:root $REMOTE_DIR/docker-compose.yml $REMOTE_DIR/.env $REMOTE_DIR/netbird/management.json
-  
+
+  # Ensure 2GB swapfile is active on e2-micro to protect against OOM
+  if [ ! -f /swapfile ]; then
+    echo "Creating 2GB swapfile for e2-micro memory protection..."
+    sudo fallocate -l 2G /swapfile 2>/dev/null || sudo dd if=/dev/zero of=/swapfile bs=1M count=2048
+    sudo chmod 600 /swapfile
+    sudo mkswap /swapfile
+    sudo swapon /swapfile
+    echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+  fi
+
   cd $REMOTE_DIR
   sudo docker compose pull --quiet
   sudo docker compose up -d --remove-orphans
