@@ -22,17 +22,6 @@ write_files:
     permissions: '0600'
     content: ''
 
-  - path: /opt/netbird/backup_to_gcs.sh
-    permissions: '0755'
-    content: |
-      #!/usr/bin/env bash
-      set -euo pipefail
-      if [ -f /opt/netbird/data/store.db ]; then
-          sqlite3 /opt/netbird/data/store.db ".backup /tmp/netbird_store.db"
-          gcloud storage cp /tmp/netbird_store.db "gs://${state_bucket}/backups/netbird/store.db" --quiet
-          rm -f /tmp/netbird_store.db
-      fi
-
   - path: /etc/systemd/system/dpi-vpn.service
     permissions: '0644'
     content: |
@@ -48,7 +37,7 @@ write_files:
       WorkingDirectory=/opt/netbird
       ExecStart=/usr/bin/docker compose up -d --remove-orphans
       ExecStop=/usr/bin/docker compose down
-      ExecStopPost=/opt/netbird/backup_to_gcs.sh
+      ExecStopPost=/bin/bash -c "if [ -x /opt/netbird/backup_to_gcs.sh ]; then /opt/netbird/backup_to_gcs.sh; fi"
       TimeoutStartSec=300
 
       [Install]
@@ -63,22 +52,11 @@ runcmd:
   # 2. Local loopback to bypass GCP hairpin NAT for Traefik
   - echo "127.0.0.1 ${netbird_fqdn}" >> /etc/hosts
 
-  # 3. Create required directory tree
+  # 3. Create required directory tree owned by ubuntu:docker
   - mkdir -p /opt/netbird/data /opt/netbird/traefik
+  - chown -R ubuntu:docker /opt/netbird
   - chmod 600 /opt/netbird/traefik/acme.json
 
-  # 4. Restore NetBird SQLite Database from GCS if exists
-  - |
-    if gcloud storage cp "gs://${state_bucket}/backups/netbird/store.db" /opt/netbird/data/store.db 2>/dev/null; then
-        echo "Restored NetBird store.db from GCS"
-        chmod 600 /opt/netbird/data/store.db
-    else
-        echo "No previous NetBird database found in GCS. Starting clean."
-    fi
-
-  # 5. Enable dpi-vpn service (auto-starts containers on reboot)
+  # 4. Enable dpi-vpn service (auto-starts containers on reboot)
   - systemctl daemon-reload
   - systemctl enable dpi-vpn.service
-
-  # 6. Install 6-hourly backup cron
-  - (crontab -l 2>/dev/null | grep -v 'backup_to_gcs.sh' || true; echo "0 */6 * * * /opt/netbird/backup_to_gcs.sh >/dev/null 2>&1") | crontab -

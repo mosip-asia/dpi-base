@@ -71,7 +71,6 @@ locals {
 
   cloud_init_rendered = templatefile("${path.module}/templates/cloud-init.yaml.tftpl", {
     netbird_fqdn = local.netbird_fqdn
-    state_bucket = var.state_bucket
   })
 }
 
