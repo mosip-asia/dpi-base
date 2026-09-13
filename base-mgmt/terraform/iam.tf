@@ -34,8 +34,8 @@ resource "google_project_iam_member" "editors" {
 
 # Dedicated Service Account for Terraform CI/CD & Automation
 resource "google_service_account" "mgmt_terraform_sa" {
-  account_id   = "dpi-mgmt-terraform"
-  display_name = "DPI Management Terraform Service Account"
+  account_id   = "base-mgmt-terraform"
+  display_name = "DPI Base Management Terraform Service Account"
   description  = "Service account used by Terraform and automation pipelines to manage infrastructure"
   depends_on   = [google_project_service.iam_apis]
 }

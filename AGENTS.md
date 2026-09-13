@@ -7,20 +7,20 @@ This repository serves as the central knowledge base, infrastructure runbook, or
 
 ## 🏗 System Architecture & Key Domains
 
-### 1. Core Management Plane (`dpi-mgmt/`) — `dpi-mgmt`
+### 1. Core Management Plane (`base-mgmt/`) — `base-mgmt`
 - **Purpose**: Permanent, decoupled, low-cost (~$0.20/mo base), 100% Stateless GitOps management control plane.
 - **Organization Boundary**: Governed by the Google Cloud Organization for **`dpi.ait.ac.th`** (Org ID: `350922776586`) using **Cloud Identity Free** ($0/month base, up to 50 managed identities with free quota scaling).
 - **Decoupled Architecture & GCP Resource Hierarchy**:
   - **Root Organization**: `dpi.ait.ac.th` (Org ID: `350922776586`) under Cloud Identity Free.
-  - **Root Management Folder**: **`dpi-base`** directly mirrors this repository structure 1:1, consolidating management billing and admin IAM.
-  - **Management Projects inside `dpi-base`**:
-    1. **Foundation (`dpi-mgmt/`)**: Root IAM governance, remote state (`gs://dpi-mgmt-tfstate`), and Secret Manager prerequisite keys for `dpi-base` only.
-    2. **Network Fabric (`dpi-vpn/`)**: 24/7 NetBird Mesh VPN tier.
+  - **Root Management Folder**: **`base`** directly mirrors this repository structure 1:1, consolidating management billing and admin IAM.
+  - **Management Projects inside `base`**:
+    1. **Foundation (`base-mgmt/`)**: Root IAM governance, remote state (`gs://base-dpi-ait-ac-th-tfstate`), and Secret Manager prerequisite keys for `base` only.
+    2. **Network Fabric (`base-vpn/`)**: 24/7 NetBird Mesh VPN tier.
     3. **Control Plane (`dpi-kube-ops/`)**: On-demand Rancher and central observability tier.
-  - **Sovereign Domain Pattern for Workloads**: `dpi-mgmt` is strictly scoped to `dpi-base`. Workload initiatives (MOSIP, DLMS, research testbeds) MUST NEVER store state or secrets in `dpi-mgmt`. Each domain maintains its own GCP folder, a dedicated `<domain>-mgmt` anchor project, and an isolated state bucket (`gs://<domain>-tfstate`).
+  - **Sovereign Domain Pattern for Workloads**: `base-mgmt` is strictly scoped to `base`. Workload initiatives (MOSIP, DLMS, research testbeds) MUST NEVER store state or secrets in `base-mgmt`. Each domain maintains its own GCP folder, a dedicated `<domain>-mgmt` anchor project, and an isolated state bucket (`gs://<domain>-<parent-domain-slug>-tfstate`).
   - **Flattened Terraform Layout**: Infrastructure code inside management anchors must live directly at `<project>/terraform/` without nested subdirectories (e.g. avoid `terraform/foundation/`).
   - **Folder-Level IAM Governance**: Grant team member access at the GCP Folder level using additive bindings (`google_folder_iam_member`) so permissions cleanly inherit to all child projects (`<domain>-mgmt`, `<domain>-*`) without duplicating project-level IAM.
-- **GCS Remote State Backend**: `dpi-base` Terraform modules target `backend "gcs"` with bucket `gs://dpi-mgmt-tfstate` and prefix `foundation`.
+- **GCS Remote State Backend**: `base-mgmt` Terraform modules target `backend "gcs"` with bucket `gs://base-dpi-ait-ac-th-tfstate` and prefix `foundation`.
 - **Authoritative DNS Invariant**: Public apex domain `dpi.ait.ac.th` is delegated by AIT to Cloud DNS Shard A (`ns-cloud-a1`–`a4`) and anchored in project `ait-brainlab-mgmt`. DNS records point to static IPs across the decoupled projects. Changes follow a strict 3-tier governance policy (Tier 1 GitOps PRs for apex/core; Tier 2 Kubernetes external-dns; Tier 3 delegated subdomains).
 
 ### 2. Identity & Access Governance
@@ -34,7 +34,7 @@ This repository serves as the central knowledge base, infrastructure runbook, or
 
 ### 3. Multi-Cluster Control Plane & Network Fabric Architecture
 - **2-Tier Decoupled Compute Model**:
-  1. **24/7 Persistent Network Tier (`dpi-vpn`)**: NetBird (Mesh VPN) and central telemetry ingestion (VictoriaMetrics) run on a minimal, low-cost instance (`e2-small`, ~$14/mo) in GCP project **`dpi-vpn`** and must remain online 24/7 to maintain the WireGuard overlay across all clusters.
+  1. **24/7 Persistent Network Tier (`base-vpn`)**: NetBird (Mesh VPN) and central telemetry ingestion (VictoriaMetrics) run on a minimal, low-cost instance (`e2-small`, ~$14/mo) in GCP project **`base-vpn`** and must remain online 24/7 to maintain the WireGuard overlay across all clusters.
   2. **On-Demand Management Tier (`dpi-kube-ops`)**: Rancher Manager runs in a dedicated control project **`dpi-kube-ops`** on an `e2-standard-4` instance. Because downstream K3s clusters run 100% autonomously, Rancher SHOULD be configured with GCP Instance Schedules (or stopped when inactive) to save ~65–75% compute costs.
 
 - **MOSIP Compatibility & Migration Guardrail**: Rancher is maintained primarily for MOSIP platform automation and API compatibility. All documentation and runbooks MUST maintain an evaluation of lightweight alternatives (e.g., Headlamp OSS, ArgoCD, Lens/k9s) for future decoupling.
@@ -78,7 +78,7 @@ AI assistants and documentation templates MUST strictly adhere to the DPI domain
 ## 🔒 Security & Safe Operating Protocols
 1. **No Hardcoded Secrets**: Never commit plain-text passwords, API tokens, OAuth client secrets, or private keys to version control.
 2. **Terraform Safety**: Always apply `lifecycle { prevent_destroy = true }` on Cloud DNS zones, GCP Secret Manager keys, and permanent static IP resources.
-3. **Decoupled Workload Plane**: Transient research workloads, containerized sandboxes, and heavy compute MUST NEVER run inside the management plane project (`dpi-mgmt`). They must run in dedicated workload projects (`dpi-workload-*`).
+3. **Decoupled Workload Plane**: Transient research workloads, containerized sandboxes, and heavy compute MUST NEVER run inside the management plane project (`base-mgmt`). They must run in dedicated workload projects (`<domain>-workload-*`).
 4. **Cloud Identity Cost Protection**: Always ensure user provisioning uses **Cloud Identity Free** ($0/month). Never activate paid Google Workspace subscriptions unless explicitly authorized with dedicated funding.
 5. **Deterministic Version Pinning**: Pin all Terraform providers, modules, and container images to explicit versions.
 6. **Timezone Standard**: Enforce `Asia/Bangkok` (ICT / UTC+7) across all infrastructure configurations, logs, and services.

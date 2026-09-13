@@ -2,7 +2,7 @@
 # 🛡️ DPI Center - Consolidated Cloud Foundation Module
 # ==========================================================
 # This module manages 100% of the permanent, static GCP cloud
-# assets for dpi-mgmt:
+# assets for base-mgmt:
 # - Cloud DNS Zone (dpi.ait.ac.th) & Core Records
 # - Project IAM Governance & CI/CD Service Account
 # - GCP Secret Manager Keys
@@ -26,7 +26,7 @@ terraform {
   }
 
   backend "gcs" {
-    bucket = "dpi-mgmt-tfstate"
+    bucket = "base-dpi-ait-ac-th-tfstate"
     prefix = "foundation"
   }
 }

@@ -28,14 +28,14 @@ dpi-kube-ops/
 
 ## 🔑 Authentication & Single Sign-On (SSO)
 
-Rancher and Grafana do **not** maintain isolated user directories. They connect to the central **Google OAuth2 / OIDC** credentials provisioned in `dpi-mgmt`:
+Rancher and Grafana do **not** maintain isolated user directories. They connect to the central **Google OAuth2 / OIDC** credentials provisioned in `base-mgmt`:
 
-* **Shared Credentials**: Uses `google-oauth-client-id` and `google-oauth-client-secret` stored in `dpi-mgmt` Secret Manager.
+* **Shared Credentials**: Uses `google-oauth-client-id` and `google-oauth-client-secret` stored in `base-mgmt` Secret Manager.
 * **Redirect URIs**:
   * Rancher: `https://rancher.dpi.ait.ac.th/verify-auth`
   * Grafana: `https://grafana.dpi.ait.ac.th/login/generic_oauth`
 * **Accepted Domains**: `@dpi.ait.ac.th`, `@ait.asia`, `@ait.ac.th`, and `@gmail.com` (enabled by the **External** OAuth Consent Screen).
 * **Kubernetes RBAC Access Mode**: Rancher's auth provider is set to **"Restricted"** access mode. Anyone with an accepted Google account can authenticate their identity, but **they are granted zero permissions until an administrator explicitly binds their account to specific clusters or projects**.
 
-See [`dpi-mgmt/oauth_setup.md`](../dpi-mgmt/oauth_setup.md) for full configuration steps.
+See [`base-mgmt/oauth_setup.md`](../base-mgmt/oauth_setup.md) for full configuration steps.
 

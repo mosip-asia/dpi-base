@@ -164,6 +164,8 @@ fi
 TARGET_TF_DIR=""
 if [[ -d "${REPO_ROOT}/${DOMAIN_NAME}-mgmt/terraform" ]]; then
   TARGET_TF_DIR="${REPO_ROOT}/${DOMAIN_NAME}-mgmt/terraform"
+elif [[ -d "${REPO_ROOT}/base-mgmt/terraform" ]]; then
+  TARGET_TF_DIR="${REPO_ROOT}/base-mgmt/terraform"
 elif [[ -d "${REPO_ROOT}/dpi-mgmt/terraform" ]]; then
   TARGET_TF_DIR="${REPO_ROOT}/dpi-mgmt/terraform"
 elif [[ -d "${REPO_ROOT}/mgmt/terraform" ]]; then

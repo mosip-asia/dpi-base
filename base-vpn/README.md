@@ -1,6 +1,6 @@
-# `dpi-vpn` — 24/7 Mesh Network Tier (NetBird)
+# `base-vpn` — 24/7 Mesh Network Tier (NetBird)
 
-**GCP Project**: `dpi-vpn`  
+**GCP Project**: `base-vpn`  
 **Purpose**: 24/7 WireGuard Mesh VPN fabric connecting all downstream K3s clusters, management endpoints, and telemetry streams.
 
 ---
@@ -16,7 +16,7 @@
 
 ## 📁 Directory Structure
 ```text
-dpi-vpn/
+base-vpn/
 ├── README.md              # This documentation
 ├── terraform/             # VPC, firewall rules (UDP 3478, 10000, 51820), static IP, e2-small VM
 └── docker/                # NetBird docker-compose.yml, Caddy/Nginx reverse proxy, OIDC configs
@@ -35,9 +35,9 @@ NetBird uses **Google OAuth2 / OIDC** for single sign-on (SSO), allowing operato
 * **`@gmail.com`**: Designated external partners and personal Google accounts.
 
 ### 🛡️ Security & Zero-Trust Access Control
-1. **External Consent Screen**: The Google OAuth Web Client (stored in `dpi-mgmt` Secret Manager) is configured with user type **External** in GCP Console so users across all 4 domains can sign in.
+1. **External Consent Screen**: The Google OAuth Web Client (stored in `base-mgmt` Secret Manager) is configured with user type **External** in GCP Console so users across all 4 domains can sign in.
 2. **Admin Approval Gate**: In NetBird Dashboard, **Auto-registration is restricted** (or User Approval is required). While anyone with a valid Google account can reach the Google login screen, **mesh VPN network access is only granted after an administrator (`akraradet@ait.asia` or `nuttasit@ait.asia`) explicitly approves the peer account**.
 3. **Setup Keys for Automation**: Downstream K3s clusters do not use human OAuth logins; they join using pre-shared Setup Keys (`k3s-control-enroll`, `k3s-downstream-enroll`) injected via Terraform/Secret Manager.
 
-See complete setup instructions in [`dpi-mgmt/oauth_setup.md`](../dpi-mgmt/oauth_setup.md).
+See complete setup instructions in [`base-mgmt/oauth_setup.md`](../base-mgmt/oauth_setup.md).
 

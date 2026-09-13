@@ -13,14 +13,14 @@ This unified runbook provides complete operational procedures for managing cloud
 
 1. **Part 1: New Sovereign Domain Landing Zone** — How to onboard a new grant or initiative (e.g. `mosip-asia`, `ai-team`).
 2. **Part 2: New Workload Project** — How to deploy a new project (K3s cluster, database, sandbox) under an existing domain.
-3. **Part 3: Base Platform Operations** — How to update core infrastructure (`dpi-mgmt`, `dpi-vpn`, `dpi-kube-ops`) and DNS.
+3. **Part 3: Base Platform Operations** — How to update core infrastructure (`base-mgmt`, `base-vpn`, `dpi-kube-ops`) and DNS.
 
 ---
 
 ## 🏛️ Part 1: Provisioning a New Sovereign Domain (Landing Zone)
 
 Every major initiative, research grant, or partner demonstrator operates as an autonomous **Sovereign Domain**.  
-**The Core Rule**: `dpi-mgmt` is strictly scoped to `dpi-base`. Workload domains **never** share state buckets, secrets, or billing accounts with `dpi-base`.
+**The Core Rule**: `base-mgmt` is strictly scoped to `base`. Workload domains **never** share state buckets, secrets, or billing accounts with `base`.
 
 ```
 [New Domain: e.g. mosip-asia]
@@ -208,11 +208,11 @@ All downstream VMs (e.g., K3s nodes) connect to the central control plane secure
 
 ---
 
-## 🛡️ Part 3: Base Platform Operations (`dpi-base`)
+## 🛡️ Part 3: Base Platform Operations (`base`)
 
-The platform engine (`dpi-base`) provides shared services for all sovereign domains:
-- `dpi-mgmt`: State, secrets, and root DNS governance.
-- `dpi-vpn`: 24/7 NetBird Mesh VPN (`e2-small`, ~$14/mo).
+The platform engine (`base`) provides shared services for all sovereign domains:
+- `base-mgmt`: State, secrets, and root DNS governance.
+- `base-vpn`: 24/7 NetBird Mesh VPN (`e2-small`, ~$14/mo).
 - `dpi-kube-ops`: On-demand Rancher Manager (`e2-standard-4`, Instance Schedule).
 
 ---
@@ -237,14 +237,14 @@ All base changes must follow standard GitOps:
    - Always create a feature branch linked to an issue: `git checkout -b feat/issue-<number>-<description>`.
 2. **Execution**:
    ```bash
-   cd dpi-mgmt/terraform       # or dpi-vpn/terraform, dpi-kube-ops/terraform
+   cd base-mgmt/terraform       # or base-vpn/terraform, dpi-kube-ops/terraform
    terraform init
    terraform plan
    terraform apply
    ```
 3. **Safety Rules**:
    - Permanent static IPs, DNS zones, and Secret Manager secrets must have `lifecycle { prevent_destroy = true }`.
-   - Never run compute workloads inside `dpi-mgmt`.
+   - Never run compute workloads inside `base-mgmt`.
    - Never commit `.env` or real billing account IDs to version control.
 
 ---
@@ -252,7 +252,7 @@ All base changes must follow standard GitOps:
 ### Step 3.3: Google OAuth2 / Single Sign-On (SSO) Setup
 
 For services requiring team authentication (NetBird, Rancher, Grafana):
-1. Configure OAuth Consent Screen in GCP Console (`dpi-mgmt`):
+1. Configure OAuth Consent Screen in GCP Console (`base-mgmt`):
    - **User Type**: `External`
    - **Support Email**: `akraradet@ait.asia`
    - **Authorized Domains**: `dpi.ait.ac.th`, `ait.asia`, `ait.ac.th`.
@@ -262,6 +262,6 @@ For services requiring team authentication (NetBird, Rancher, Grafana):
      - Rancher: `https://rancher.dpi.ait.ac.th/verify-auth`
 3. Seed secrets into Secret Manager:
    ```bash
-   echo -n "<CLIENT_ID>" | gcloud secrets versions add google-oauth-client-id --data-file=- --project=dpi-mgmt
-   echo -n "<CLIENT_SECRET>" | gcloud secrets versions add google-oauth-client-secret --data-file=- --project=dpi-mgmt
+   echo -n "<CLIENT_ID>" | gcloud secrets versions add google-oauth-client-id --data-file=- --project=base-mgmt
+   echo -n "<CLIENT_SECRET>" | gcloud secrets versions add google-oauth-client-secret --data-file=- --project=base-mgmt
    ```

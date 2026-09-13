@@ -1,7 +1,7 @@
 # ==========================================================
 # 🌐 Authoritative Cloud DNS Subzone: base.dpi.ait.ac.th
 # ==========================================================
-# This managed zone is 100% owned inside project dpi-mgmt under
+# This managed zone is 100% owned inside project base-mgmt under
 # Organization 350922776586. It is delegated from ait-brainlab-mgmt
 # via a single NS record, providing full local DNS sovereignty.
 # ==========================================================

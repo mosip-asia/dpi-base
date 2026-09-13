@@ -1,4 +1,5 @@
-project_id                 = "dpi-mgmt"
+project_id                 = "base-mgmt"
+state_bucket               = "base-dpi-ait-ac-th-tfstate"
 region                     = "asia-southeast1"
 domain_name                = "base.dpi.ait.ac.th."
 
