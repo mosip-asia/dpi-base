@@ -56,6 +56,23 @@ AI assistants and documentation templates MUST strictly adhere to the DPI domain
 - **Dry-Run & Idempotent Apply**: Seed bootstrap scripts must support a `--plan` / `--dry-run` preview flag and be 100% idempotent (safe to run repeatedly without duplicating resources or errors).
 - **Local Org Admin Execution**: Seed bootstrapping (creating folders, linking billing accounts) must be executed locally by human Organization Administrators with 2FA, never delegated to high-privilege CI/CD service accounts.
 
+### 6. Documentation Standard & Issue-Driven GitOps Workflow
+- **The Consolidated 3-Document Standard**:
+  To prevent documentation drift and fragmented sprawling files, all repository documentation is strictly consolidated into three canonical files:
+  1. **`README.md`**: What the repo is for (purpose, decoupled architecture, platform vs. sovereign domains, core projects, IAM governance, and repo layout).
+  2. **`STATUS.md`**: Current situation of the repo (phase roadmap 0–4, live asset inventory, master task tracking checklist, and immediate next steps).
+  3. **`docs/sop.md`**: Unified Standard Operating Procedure runbook covering:
+     - Part 1: Provisioning a New Sovereign Domain (Landing Zone: billing setup, bootstrap script, Terraform, parent DNS handshake).
+     - Part 2: Provisioning a New Workload Project (naming `<domain>-<workload>`, folder IAM inheritance, NetBird enrollment).
+     - Part 3: Base Platform Operations (3-tier DNS policy, Terraform lifecycle, OAuth SSO).
+  - *Anti-Sprawl Rule*: AI assistants must NEVER create fragmented markdown files in nested `docs/` folders. All documentation updates must directly update `README.md`, `STATUS.md`, or `docs/sop.md`.
+- **Billing Account Naming Invariant**:
+  All Google Cloud Billing Accounts must strictly adhere to the naming format: `DPI Center - <Team or Grant Name>` (e.g. `DPI Center - Base Platform`, `DPI Center - MOSIP Asia Grant`). This ensures that official Google Cloud PDF tax invoices and prepaid top-up receipts match grant budget lines verbatim for institutional university reimbursement.
+- **GitHub Issue-Driven Development**:
+  - Feature branches must always follow: `feat/issue-<number>-<description>` or `fix/issue-<number>-<description>`.
+  - Pull Requests and commit messages must include linking keywords (`Closes #<number>` or `Resolves #<number>`) so issues and project boards update automatically upon merge.
+  - Task completion checklists in `STATUS.md` must be kept in lockstep with GitHub Issues.
+
 ---
 
 ## 🔒 Security & Safe Operating Protocols
