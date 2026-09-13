@@ -1,4 +1,4 @@
-# 🔑 Google OAuth2 / OIDC Setup Guide (`dpi-mgmt/oauth_setup.md`)
+# 🔑 Google OAuth2 / OIDC Setup Guide (`base-mgmt/oauth_setup.md`)
 
 > **The Permanent Identity Provider**: Google OAuth2 handles 100% of human authentication and Single Sign-On (SSO) across DPI Center web portals, demonstrators, and administrative consoles using authorized Google accounts.
 
@@ -26,7 +26,7 @@ flowchart TD
         OAuthScreen --> GoogleTokens
     end
 
-    subgraph SecretManager ["🔐 GCP Secret Manager (dpi-mgmt)"]
+    subgraph SecretManager ["🔐 GCP Secret Manager (base-mgmt)"]
         SecClientID["google-oauth-client-id"]
         SecClientSecret["google-oauth-client-secret"]
     end
@@ -121,8 +121,8 @@ CLIENT_ID="<your-oauth-client-id>.apps.googleusercontent.com"
 CLIENT_SECRET="<your-oauth-client-secret>"
 
 # Store in Secret Manager
-echo -n "$CLIENT_ID" | gcloud secrets versions add google-oauth-client-id --project=dpi-mgmt --data-file=-
-echo -n "$CLIENT_SECRET" | gcloud secrets versions add google-oauth-client-secret --project=dpi-mgmt --data-file=-
+echo -n "$CLIENT_ID" | gcloud secrets versions add google-oauth-client-id --project=base-mgmt --data-file=-
+echo -n "$CLIENT_SECRET" | gcloud secrets versions add google-oauth-client-secret --project=base-mgmt --data-file=-
 ```
 
 ---
@@ -159,7 +159,7 @@ NetBird VPN accepts logins from Google accounts belonging to any of the followin
 
 ## 🐮 Rancher & Observability (Grafana) OAuth Integration
 
-Rancher and Grafana reuse the **exact same** Google OAuth2 credentials stored in `dpi-mgmt` Secret Manager, providing unified Single Sign-On (SSO) across the entire platform.
+Rancher and Grafana reuse the **exact same** Google OAuth2 credentials stored in `base-mgmt` Secret Manager, providing unified Single Sign-On (SSO) across the entire platform.
 
 ### Rancher Configuration
 1. **Initial Bootstrap**: On initial deployment, Rancher creates a temporary bootstrap password for `admin`.

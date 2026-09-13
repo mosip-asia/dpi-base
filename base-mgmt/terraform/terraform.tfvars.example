@@ -1,0 +1,12 @@
+project_id     = "base-mgmt"
+region         = "asia-southeast1"
+domain_name    = "base.dpi.ait.ac.th."
+folder_id      = "740224775327"
+
+folder_admins  = [
+  "akraradet@ait.asia",
+  "nuttasit@ait.asia"
+]
+
+folder_members = []
+

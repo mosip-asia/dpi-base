@@ -1,4 +1,4 @@
-# Management Plane (`dpi-mgmt/`) — DPI Center
+# Management Plane (`base-mgmt/`) — DPI Center
 
 This directory contains the central Infrastructure-as-Code (IaC), identity configurations, and operational governance tools for the **DPI Center**.
 
@@ -12,12 +12,10 @@ The DPI Center management plane is designed to be:
 * **High Availability**: Backed by Google Cloud Platform's globally distributed Cloud DNS and Identity infrastructure (100% SLA).
 
 ```text
-dpi-mgmt/
+base-mgmt/
 ├── README.md                      # Management plane architecture & operations (this file)
-├── checklist.md                   # Master implementation checklist & status roadmap
 ├── oauth_setup.md                 # Google OAuth2 / OIDC console setup SOP
-└── terraform/                     # Modular Terraform IaC
-    └── foundation/                # Project baseline, Cloud DNS (dpi.ait.ac.th), IAM, Secrets
+└── terraform/                     # Project baseline, Cloud DNS, IAM, Secrets (flattened layout)
 ```
 
 ---
@@ -28,7 +26,7 @@ dpi-mgmt/
    Managed under Google Cloud Identity Free (Org ID: `350922776586`). Provides sovereign organizational control, centralized IAM policies, and resource hierarchy without recurring subscription fees.
 
 2. **Decoupled Workloads & Compute**:
-   The management plane (`dpi-mgmt`) is strictly reserved for authoritative Cloud DNS, GCS remote state (`gs://dpi-mgmt-tfstate`), root IAM, and shared secrets. Compute workloads run in dedicated tier projects (`dpi-vpn`, `dpi-kube-ops`, `dpi-workload-*`).
+   The management plane (`base-mgmt`) is strictly reserved for authoritative Cloud DNS, GCS remote state (`gs://base-dpi-ait-ac-th-tfstate`), root IAM, and shared secrets. Compute workloads run in dedicated tier projects (`base-vpn`, `dpi-kube-ops`, `<domain>-*`).
 
 3. **Operations Access**:
-   Daily administration authenticates using individual university accounts (`akraradet@ait.asia` and `nuttasit@ait.asia`) and dedicated Terraform service accounts (`dpi-mgmt-terraform`). Root super admin (`admin@dpi.ait.ac.th`) is strictly break-glass.
+   Daily administration authenticates using individual university accounts (`akraradet@ait.asia` and `nuttasit@ait.asia`) and dedicated Terraform service accounts (`base-mgmt-terraform`). Root super admin (`admin@dpi.ait.ac.th`) is strictly break-glass.
