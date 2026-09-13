@@ -48,12 +48,13 @@ echo -e "Target VM:   ${BOLD}$VM_NAME${NC} (Project: ${CYAN}$VPN_PROJECT${NC}, Z
 echo -e "Source Dir:  ${BOLD}$SCRIPT_DIR/docker${NC}"
 echo ""
 
-# Upload docker-compose.yml, management.json.template, and deploy.sh
-SCP_CMD="gcloud compute scp --project=$VPN_PROJECT --zone=$ZONE --tunnel-through-iap $SCRIPT_DIR/docker/docker-compose.yml $SCRIPT_DIR/docker/management.json.template $SCRIPT_DIR/docker/deploy.sh $VM_NAME:/tmp/"
+# Upload docker-compose.yml, management.json.template, .env.template, and deploy.sh
+SCP_CMD="gcloud compute scp --project=$VPN_PROJECT --zone=$ZONE --tunnel-through-iap $SCRIPT_DIR/docker/docker-compose.yml $SCRIPT_DIR/docker/management.json.template $SCRIPT_DIR/docker/.env.template $SCRIPT_DIR/docker/deploy.sh $VM_NAME:/tmp/"
 log_cmd "$SCP_CMD"
 gcloud compute scp --project="$VPN_PROJECT" --zone="$ZONE" --tunnel-through-iap \
   "$SCRIPT_DIR/docker/docker-compose.yml" \
   "$SCRIPT_DIR/docker/management.json.template" \
+  "$SCRIPT_DIR/docker/.env.template" \
   "$SCRIPT_DIR/docker/deploy.sh" \
   "$VM_NAME:/tmp/"
 

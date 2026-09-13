@@ -44,6 +44,11 @@ if [ -f /tmp/management.json.template ]; then
   sudo mv /tmp/management.json.template "$DPI_DIR/netbird/management.json.template"
 fi
 
+if [ -f /tmp/.env.template ]; then
+  log_cmd "mv /tmp/.env.template $DPI_DIR/.env.template"
+  sudo mv /tmp/.env.template "$DPI_DIR/.env.template"
+fi
+
 # 2. Fetch Secrets from Secret Manager via VM Attached Service Account
 echo -e "\n${BOLD}--- [2/5] Resolving Secrets from GCP Secret Manager ---${NC}"
 log_info "Fetching Google OAuth Client ID & Secret from project '$MGMT_PROJECT'..."
@@ -73,9 +78,20 @@ else
 fi
 
 # 3. Render Configuration Files (.env and management.json)
-echo -e "\n${BOLD}--- [3/5] Rendering Configuration Files ---${NC}"
-log_cmd "Rendering $DPI_DIR/.env"
-cat << ENV_EOF | sudo tee "$DPI_DIR/.env" > /dev/null
+echo -e "\n${BOLD}--- [3/5] Rendering Configuration Files (.env & management.json) ---${NC}"
+if [ -f "$DPI_DIR/.env.template" ]; then
+  log_cmd "Rendering $DPI_DIR/.env from template on VM"
+  sed -e "s|\$NETBIRD_FQDN|$NETBIRD_FQDN|g" \
+      -e "s|\$PROD_FQDN|$PROD_FQDN|g" \
+      -e "s|\$ACME_EMAIL|$ACME_EMAIL|g" \
+      -e "s|\$GOOGLE_OAUTH_CLIENT_ID|$OAUTH_CLIENT_ID|g" \
+      -e "s|\$GOOGLE_OAUTH_CLIENT_SECRET|$OAUTH_CLIENT_SECRET|g" \
+      -e "s|\$NETBIRD_RELAY_SECRET|$RELAY_SECRET|g" \
+      -e "s|\$SINGLE_ACCOUNT_MODE_DOMAIN|$SINGLE_ACCOUNT_MODE_DOMAIN|g" \
+      "$DPI_DIR/.env.template" | sudo tee "$DPI_DIR/.env" > /dev/null
+else
+  log_cmd "Writing $DPI_DIR/.env directly on VM"
+  cat << ENV_EOF | sudo tee "$DPI_DIR/.env" > /dev/null
 NETBIRD_FQDN="$NETBIRD_FQDN"
 PROD_FQDN="$PROD_FQDN"
 ACME_EMAIL="$ACME_EMAIL"
@@ -84,6 +100,7 @@ GOOGLE_OAUTH_CLIENT_SECRET="$OAUTH_CLIENT_SECRET"
 NETBIRD_RELAY_SECRET="$RELAY_SECRET"
 SINGLE_ACCOUNT_MODE_DOMAIN="$SINGLE_ACCOUNT_MODE_DOMAIN"
 ENV_EOF
+fi
 
 if [ -f "$DPI_DIR/netbird/management.json.template" ]; then
   log_cmd "Rendering $DPI_DIR/netbird/management.json from template"
