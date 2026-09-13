@@ -14,7 +14,7 @@
 │                           DPI CENTER ROADMAP OVERVIEW                           │
 └─────────────────────────────────────────────────────────────────────────────────┘
   Phase 0: Cloud Organization & Identity Foundation      [🟢 COMPLETED]
-  Phase 1: Foundation Management Plane (base-mgmt)       [🟢 DEPLOYED]
+  Phase 1: Foundation Management Plane (base-mgmt)       [🟢 COMPLETED]
   Phase 2: Network Fabric Tier (base-vpn / NetBird)      [🔴 PLANNED]
   Phase 3: Multi-Cluster Control Plane (dpi-kube-ops)    [🔴 PLANNED]
   Phase 4: Sovereign Workload Initiatives (MOSIP, DLMS)  [🔴 PLANNED]
@@ -37,7 +37,7 @@
 
 ---
 
-### Phase 1: Foundation Management Plane (`base-mgmt`) (Active / In Progress)
+### Phase 1: Foundation Management Plane (`base-mgmt`) (Closed / Verified Live)
 * **Lead**: `@akraradets`
 * **Tracking Issue**: [Issue #3](https://github.com/mosip-asia/dpi-base/issues/3)
 * **Active Branch**: `feat/issue-3-foundation`
@@ -48,12 +48,12 @@
 | `1.2` | Create root GCP Folder `base` | GCP Resource Manager | 🟢 Verified | Folder `folders/740224775327`; consolidates base billing & IAM |
 | `1.3` | Enable Core GCP APIs | Project `base-mgmt` | 🟢 Verified | `compute`, `dns`, `iam`, `secretmanager`, `storage` enabled |
 | `1.4` | GCS Remote State Bucket | `gs://base-dpi-ait-ac-th-tfstate` | 🟢 Verified | Singapore (`asia-southeast1`), Object Versioning ON |
-| `1.5` | Flatten Terraform Code Layout | `base-mgmt/terraform/` | 🟢 Verified | Code moved directly to `base-mgmt/terraform/` (15 resources planned) |
+| `1.5` | Flatten Terraform Code Layout | `base-mgmt/terraform/` | 🟢 Verified | Code moved directly to `base-mgmt/terraform/` (13 resources applied) |
 | `1.6` | Pre-flight Environment Validator | `scripts/check_env.sh` | 🟢 Verified | Validates syntax, placeholders, and live GCP auth |
 | `1.7` | Domain Seed Bootstrap Script | `scripts/bootstrap_domain.sh`| 🟢 Verified | Supports `--plan`, idempotent apply, auto-detects paths |
 | `1.8` | Root `.env` & `.env.example` Workflow | Root `.env.example` | 🟢 Verified | Sanitized, gitignored, public billing privacy enforced |
 | `1.9` | Deploy GitOps Foundation via Terraform | Project `base-mgmt` | 🟢 Verified | 13 resources deployed (DNS zone, lien, Secret Manager, Folder IAM) |
-| `1.10`| Authoritative Parent DNS Delegation Handshake | `ait-brainlab-mgmt` | 🟡 Ready | Nameservers: `ns-cloud-e1..e4.googledomains.com.` |
+| `1.10`| Authoritative Parent DNS Delegation Handshake | `ait-brainlab-mgmt` | 🟢 Verified | Shard E NS records delegated; resolving worldwide |
 
 ---
 
@@ -106,24 +106,14 @@
 | **Foundation Project** | `base-mgmt` (`892879827967`) | Folder `base` | Active |
 | **State Storage Bucket** | `gs://base-dpi-ait-ac-th-tfstate` | `base-mgmt` (`asia-southeast1`) | Active (Versioning ON) |
 | **Parent Authoritative DNS** | Zone `dpi-center` (Shard A) | `ait-brainlab-mgmt` | Active (Delegated from `ait.ac.th`) |
-| **Foundation DNS Subzone** | `base.dpi.ait.ac.th.` (Shard E) | `base-mgmt` | Active (`ns-cloud-e1..e4`) |
+| **Foundation DNS Subzone** | `base.dpi.ait.ac.th.` (Shard E) | `base-mgmt` | 🟢 Active & Resolving Worldwide |
 
 ---
 
 ## 🎯 Immediate Next Actions
 
-1. **Perform Parent DNS Delegation Handshake**:
-   - Zone `dpi-center` in project `ait-brainlab-mgmt`.
-   - Add `NS` record for `base.dpi.ait.ac.th.` with nameservers:
-     * `ns-cloud-e1.googledomains.com.`
-     * `ns-cloud-e2.googledomains.com.`
-     * `ns-cloud-e3.googledomains.com.`
-     * `ns-cloud-e4.googledomains.com.`
-2. **Verify Public DNS Resolution**:
-   ```bash
-   dig NS base.dpi.ait.ac.th +short
-   ```
-3. **Merge Pull Request #6**:
-   - Merge `feat/issue-3-foundation` into `main`.
-4. **Kick off Phase 2 (`base-vpn`)**:
-   - Create branch `feat/issue-4-vpn` and begin NetBird mesh VPN deployment.
+1. **Merge Pull Request #6**:
+   - Merge `feat/issue-3-foundation` into `main` (Resolves Issue #3).
+2. **Kick off Phase 2 (`base-vpn`)**:
+   - Create branch `feat/issue-4-vpn` (linked to Issue #4).
+   - Provision NetBird WireGuard mesh VPN tier on `e2-small` instance.
