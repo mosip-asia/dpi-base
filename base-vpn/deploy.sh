@@ -75,7 +75,7 @@ gcloud compute scp --project="$VPN_PROJECT" --zone="$ZONE" --tunnel-through-iap 
 echo "=========================================================="
 echo "⚡ [3/4] Installing Configs & Pulling Containers..."
 echo "=========================================================="
-gcloud compute ssh "$VM_NAME" --project="$VPN_PROJECT" --zone="$ZONE" --tunnel-through-iap --command="
+gcloud compute ssh "$VM_NAME" --project="$VPN_PROJECT" --zone="$ZONE" --tunnel-through-iap -- bash -s << REMOTE_EOF
   sudo mv /tmp/docker-compose.yml $REMOTE_DIR/docker-compose.yml
   sudo mv /tmp/.env $REMOTE_DIR/.env
   sudo mv /tmp/management.json $REMOTE_DIR/netbird/management.json
@@ -95,7 +95,7 @@ gcloud compute ssh "$VM_NAME" --project="$VPN_PROJECT" --zone="$ZONE" --tunnel-t
   cd $REMOTE_DIR
   sudo docker compose pull --quiet
   sudo docker compose up -d --remove-orphans
-"
+REMOTE_EOF
 
 echo "=========================================================="
 echo "✅ [4/4] Verifying Running Services..."
