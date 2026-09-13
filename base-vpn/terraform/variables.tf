@@ -25,7 +25,7 @@ variable "region" {
 variable "zone" {
   type        = string
   description = "GCP Zone for Compute Engine instance"
-  default     = "asia-southeast1-a"
+  default     = "asia-southeast1-b"
 }
 
 variable "domain_name" {

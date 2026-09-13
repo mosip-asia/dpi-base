@@ -13,7 +13,7 @@ set -euo pipefail
 VPN_PROJECT="base-vpn"
 MGMT_PROJECT="base-mgmt"
 VM_NAME="base-vpn-vm"
-ZONE="asia-southeast1-a"
+ZONE="asia-southeast1-b"
 REMOTE_DIR="/opt/dpi"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
