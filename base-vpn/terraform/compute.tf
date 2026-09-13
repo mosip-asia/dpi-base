@@ -44,24 +44,14 @@ resource "google_secret_manager_secret_iam_member" "oauth_client_secret_accessor
 
 
 # ==========================================================
-# 🔑 Generate Persistent Random Relay Secret
-# ==========================================================
-resource "random_password" "netbird_relay_secret" {
-  length  = 64
-  special = false
-}
-
-# ==========================================================
 # 📄 Template Rendering (OS Level Only)
 # ==========================================================
 locals {
   netbird_fqdn = "${var.netbird_subdomain}.${trimsuffix(var.domain_name, ".")}"
 
   cloud_init_rendered = templatefile("${path.module}/templates/cloud-init.yaml.tftpl", {
-    netbird_fqdn           = local.netbird_fqdn
-    state_bucket           = var.state_bucket
-    docker_compose_content = indent(6, file("${path.module}/../docker/docker-compose.yml"))
-    mgmt_template_content  = indent(6, file("${path.module}/../docker/management.json.template"))
+    netbird_fqdn = local.netbird_fqdn
+    state_bucket = var.state_bucket
   })
 }
 
@@ -99,14 +89,8 @@ resource "google_compute_instance" "vpn_vm" {
   }
 
   metadata = {
-    enable-oslogin              = "TRUE"
-    user-data                   = local.cloud_init_rendered
-    NETBIRD_FQDN                = local.netbird_fqdn
-    ACME_EMAIL                  = var.acme_email
-    GOOGLE_OAUTH_CLIENT_ID      = var.google_oauth_client_id
-    GOOGLE_OAUTH_CLIENT_SECRET  = var.google_oauth_client_secret
-    NETBIRD_RELAY_SECRET        = random_password.netbird_relay_secret.result
-    SINGLE_ACCOUNT_MODE_DOMAIN  = var.single_account_mode_domain
+    enable-oslogin = "TRUE"
+    user-data      = local.cloud_init_rendered
   }
 
   lifecycle {

@@ -15,16 +15,6 @@ write_files:
     permissions: '0600'
     content: ''
 
-  - path: /opt/dpi/docker-compose.yml
-    permissions: '0644'
-    content: |
-${docker_compose_content}
-
-  - path: /opt/dpi/netbird/management.json.template
-    permissions: '0644'
-    content: |
-${mgmt_template_content}
-
   - path: /opt/dpi/scripts/backup_to_gcs.sh
     permissions: '0755'
     content: |
@@ -35,193 +25,6 @@ ${mgmt_template_content}
           gcloud storage cp /tmp/netbird_store.db "gs://${state_bucket}/backups/netbird/store.db" --quiet
           rm -f /tmp/netbird_store.db
       fi
-
-  - path: /opt/dpi/scripts/sync_env.sh
-    permissions: '0755'
-    content: |
-      #!/usr/bin/env bash
-      set -euo pipefail
-
-      METADATA_BASE="http://metadata.google.internal/computeMetadata/v1/instance/attributes"
-      HEADER="Metadata-Flavor: Google"
-
-      get_meta() {
-        local key="$1"
-        local default="$2"
-        local val
-        val=$(curl -s -f -H "$HEADER" "$METADATA_BASE/$key" 2>/dev/null || echo "")
-        if [ -z "$val" ]; then
-          echo "$default"
-        else
-          echo "$val"
-        fi
-      }
-
-      NETBIRD_FQDN=$(get_meta "NETBIRD_FQDN" "netbird.base.dpi.ait.ac.th")
-      ACME_EMAIL=$(get_meta "ACME_EMAIL" "admin@dpi.ait.ac.th")
-      GOOGLE_OAUTH_CLIENT_ID=$(get_meta "GOOGLE_OAUTH_CLIENT_ID" "")
-      GOOGLE_OAUTH_CLIENT_SECRET=$(get_meta "GOOGLE_OAUTH_CLIENT_SECRET" "")
-      NETBIRD_RELAY_SECRET=$(get_meta "NETBIRD_RELAY_SECRET" "")
-      SINGLE_ACCOUNT_MODE_DOMAIN=$(get_meta "SINGLE_ACCOUNT_MODE_DOMAIN" "dpi.ait.ac.th")
-
-      mkdir -p /opt/dpi/netbird/data /opt/dpi/traefik /opt/dpi/scripts
-
-      ENV_FILE="/opt/dpi/.env"
-      TMP_ENV="/tmp/.env.tmp"
-
-      MGMT_JSON="/opt/dpi/netbird/management.json"
-      TMP_MGMT="/tmp/management.json.tmp"
-      MGMT_TEMPLATE="/opt/dpi/netbird/management.json.template"
-
-      # 1. Generate temporary .env
-      cat <<EOF > "$TMP_ENV"
-      NETBIRD_FQDN=$${NETBIRD_FQDN}
-      ACME_EMAIL=$${ACME_EMAIL}
-      GOOGLE_OAUTH_CLIENT_ID=$${GOOGLE_OAUTH_CLIENT_ID}
-      GOOGLE_OAUTH_CLIENT_SECRET=$${GOOGLE_OAUTH_CLIENT_SECRET}
-      NETBIRD_RELAY_SECRET=$${NETBIRD_RELAY_SECRET}
-      SINGLE_ACCOUNT_MODE_DOMAIN=$${SINGLE_ACCOUNT_MODE_DOMAIN}
-      EOF
-      chmod 0600 "$TMP_ENV"
-
-      # 2. Generate temporary management.json from template or fallback
-      if [ -f "$MGMT_TEMPLATE" ]; then
-        sed \
-          -e "s|\$GOOGLE_OAUTH_CLIENT_ID|$${GOOGLE_OAUTH_CLIENT_ID}|g" \
-          -e "s|\$GOOGLE_OAUTH_CLIENT_SECRET|$${GOOGLE_OAUTH_CLIENT_SECRET}|g" \
-          -e "s|\$NETBIRD_RELAY_SECRET|$${NETBIRD_RELAY_SECRET}|g" \
-          -e "s|\$SINGLE_ACCOUNT_MODE_DOMAIN|$${SINGLE_ACCOUNT_MODE_DOMAIN}|g" \
-          -e "s|\$NETBIRD_FQDN|$${NETBIRD_FQDN}|g" \
-          "$MGMT_TEMPLATE" > "$TMP_MGMT"
-      else
-        cat <<EOF > "$TMP_MGMT"
-      {
-        "DataDir": "/var/lib/netbird",
-        "Stuns": [
-          {"Proto": "udp", "URI": "stun:stun.l.google.com:19302"},
-          {"Proto": "udp", "URI": "stun:stun1.l.google.com:19302"},
-          {"Proto": "udp", "URI": "stun:stun2.l.google.com:19302"}
-        ],
-        "HttpConfig": {
-          "AuthClientID": "$${GOOGLE_OAUTH_CLIENT_ID}",
-          "AuthAudience": "$${GOOGLE_OAUTH_CLIENT_ID}",
-          "AuthAuthority": "https://accounts.google.com",
-          "AuthIssuer": "https://accounts.google.com",
-          "AuthKeysLocation": "https://www.googleapis.com/oauth2/v3/certs",
-          "OIDCConfigEndpoint": "https://accounts.google.com/.well-known/openid-configuration"
-        },
-        "PKCEAuthorizationFlow": {
-          "ProviderConfig": {
-            "ClientID": "$${GOOGLE_OAUTH_CLIENT_ID}",
-            "ClientSecret": "$${GOOGLE_OAUTH_CLIENT_SECRET}",
-            "Audience": "$${GOOGLE_OAUTH_CLIENT_ID}",
-            "TokenEndpoint": "https://oauth2.googleapis.com/token",
-            "AuthorizationEndpoint": "https://accounts.google.com/o/oauth2/v2/auth",
-            "Scope": "openid profile email",
-            "UseIDToken": true,
-            "RedirectURLs": [
-              "http://localhost:53000"
-            ]
-          }
-        },
-        "IdpManagerConfig": null,
-        "SingleAccountModeDomain": "$${SINGLE_ACCOUNT_MODE_DOMAIN}",
-        "Datadir": "/var/lib/netbird",
-        "Signal": {
-          "URI": "$${NETBIRD_FQDN}:443",
-          "Proto": "https"
-        },
-        "Relay": {
-          "Addresses": ["rels://$${NETBIRD_FQDN}:443/relay"],
-          "CredentialsTTL": "24h0m0s",
-          "Secret": "$${NETBIRD_RELAY_SECRET}"
-        },
-        "EmbeddedIdP": {
-          "Enabled": false
-        }
-      }
-      EOF
-      fi
-      chmod 0600 "$TMP_MGMT"
-
-      # Check if changes occurred
-      CHANGED=0
-      if [ ! -f "$ENV_FILE" ] || ! cmp -s "$ENV_FILE" "$TMP_ENV"; then
-        mv "$TMP_ENV" "$ENV_FILE"
-        CHANGED=1
-      else
-        rm -f "$TMP_ENV"
-      fi
-
-      if [ ! -f "$MGMT_JSON" ] || ! cmp -s "$MGMT_JSON" "$TMP_MGMT"; then
-        mv "$TMP_MGMT" "$MGMT_JSON"
-        CHANGED=1
-      else
-        rm -f "$TMP_MGMT"
-      fi
-
-      if [ "$CHANGED" -eq 1 ]; then
-        echo "CONFIG_CHANGED"
-      else
-        echo "CONFIG_UNCHANGED"
-      fi
-
-  - path: /opt/dpi/scripts/metadata_watcher.sh
-    permissions: '0755'
-    content: |
-      #!/usr/bin/env bash
-      set -u
-
-      METADATA_URL="http://metadata.google.internal/computeMetadata/v1/instance/attributes"
-      HEADER="Metadata-Flavor: Google"
-
-      echo "Starting DPI Metadata Watcher..."
-
-      # Initial sync on daemon startup
-      SYNC_RESULT=$(/opt/dpi/scripts/sync_env.sh 2>&1 || true)
-      echo "Initial sync: $SYNC_RESULT"
-
-      # Get initial ETag
-      ETAG=$(curl -s -f -I -H "$HEADER" "$METADATA_URL/?recursive=true" 2>/dev/null | grep -i '^etag:' | tr -d '\r\n' | awk '{print $2}' || true)
-      echo "Initial metadata ETag: $ETAG"
-
-      while true; do
-        TMP_HEADERS=$(mktemp)
-
-        # Long poll for metadata attribute changes (blocks up to 360 seconds with 0% CPU)
-        HTTP_CODE=$(curl -s -o /dev/null -w "%%{http_code}" -D "$TMP_HEADERS" -H "$HEADER" \
-          "$METADATA_URL/?recursive=true&wait_for_change=true&last_etag=$ETAG&timeout_sec=360" 2>/dev/null || echo "000")
-
-        NEW_ETAG=$(grep -i '^etag:' "$TMP_HEADERS" 2>/dev/null | tr -d '\r\n' | awk '{print $2}' || true)
-        rm -f "$TMP_HEADERS"
-
-        if [ "$HTTP_CODE" = "200" ] && [ -n "$NEW_ETAG" ] && [ "$NEW_ETAG" != "$ETAG" ]; then
-          echo "Metadata change detected! (Old ETag: $ETAG -> New ETag: $NEW_ETAG)"
-          ETAG="$NEW_ETAG"
-
-          SYNC_OUT=$(/opt/dpi/scripts/sync_env.sh 2>&1 || true)
-          echo "Sync output: $SYNC_OUT"
-
-          if echo "$SYNC_OUT" | grep -q "CONFIG_CHANGED"; then
-            echo "Configuration change applied. Reloading containers..."
-            if [ -f /opt/dpi/docker-compose.yml ]; then
-              docker compose -f /opt/dpi/docker-compose.yml up -d --remove-orphans || true
-              docker compose -f /opt/dpi/docker-compose.yml restart netbird-management netbird-dashboard netbird-relay || true
-              echo "Containers reloaded successfully."
-            fi
-          fi
-        elif [ "$HTTP_CODE" = "504" ]; then
-          # Timeout reached with no changes; loop and poll again
-          continue
-        else
-          # Disconnect or error; sleep briefly before retrying
-          sleep 3
-          CURRENT_ETAG=$(curl -s -f -I -H "$HEADER" "$METADATA_URL/?recursive=true" 2>/dev/null | grep -i '^etag:' | tr -d '\r\n' | awk '{print $2}' || true)
-          if [ -n "$CURRENT_ETAG" ]; then
-            ETAG="$CURRENT_ETAG"
-          fi
-        fi
-      done
 
   - path: /etc/systemd/system/dpi-vpn.service
     permissions: '0644'
@@ -236,31 +39,10 @@ ${mgmt_template_content}
       Type=oneshot
       RemainAfterExit=yes
       WorkingDirectory=/opt/dpi
-      ExecStartPre=/opt/dpi/scripts/sync_env.sh
       ExecStart=/usr/bin/docker compose up -d --remove-orphans
       ExecStop=/usr/bin/docker compose down
       ExecStopPost=/opt/dpi/scripts/backup_to_gcs.sh
       TimeoutStartSec=300
-
-      [Install]
-      WantedBy=multi-user.target
-
-  - path: /etc/systemd/system/dpi-metadata-watcher.service
-    permissions: '0644'
-    content: |
-      [Unit]
-      Description=DPI Center Metadata Change Watcher Daemon
-      Requires=docker.service
-      After=docker.service network-online.target dpi-vpn.service
-      Wants=network-online.target
-
-      [Service]
-      Type=simple
-      ExecStart=/opt/dpi/scripts/metadata_watcher.sh
-      Restart=always
-      RestartSec=5
-      StandardOutput=journal
-      StandardError=journal
 
       [Install]
       WantedBy=multi-user.target
@@ -277,10 +59,7 @@ runcmd:
   - mkdir -p /opt/dpi/netbird/data /opt/dpi/traefik /opt/dpi/scripts
   - chmod 600 /opt/dpi/traefik/acme.json
 
-  # 4. Initial sync from GCP instance metadata
-  - /opt/dpi/scripts/sync_env.sh
-
-  # 5. Restore NetBird SQLite Database from GCS if exists
+  # 4. Restore NetBird SQLite Database from GCS if exists
   - |
     if gcloud storage cp "gs://${state_bucket}/backups/netbird/store.db" /opt/dpi/netbird/data/store.db 2>/dev/null; then
         echo "Restored NetBird store.db from GCS"
@@ -289,12 +68,9 @@ runcmd:
         echo "No previous NetBird database found in GCS. Starting clean."
     fi
 
-  # 6. Enable and start dpi-vpn and dpi-metadata-watcher services
+  # 5. Enable dpi-vpn service (auto-starts containers on reboot)
   - systemctl daemon-reload
   - systemctl enable dpi-vpn.service
-  - systemctl start dpi-vpn.service
-  - systemctl enable dpi-metadata-watcher.service
-  - systemctl start dpi-metadata-watcher.service
 
-  # 7. Install 6-hourly backup cron
+  # 6. Install 6-hourly backup cron
   - (crontab -l 2>/dev/null | grep -v 'backup_to_gcs.sh' || true; echo "0 */6 * * * /opt/dpi/scripts/backup_to_gcs.sh >/dev/null 2>&1") | crontab -

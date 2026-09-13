@@ -72,11 +72,11 @@ terraform -chdir=base-vpn/terraform init
 terraform -chdir=base-vpn/terraform apply
 ```
 
-### Step 2: In-Place Configuration & Real-Time Metadata Watcher
-The VM runs `dpi-metadata-watcher.service`, an event-driven daemon using GCP native long-polling (`wait_for_change=true`):
-- **Zero-Downtime Config Updates**: When variables (OAuth credentials, FQDN, ACME email) are updated in `base-vpn/terraform/variables.tf` and applied via `terraform apply`, GCP updates VM metadata in place.
-- **Instant Trigger**: The watcher unblocks within 1 second of `instances.setMetadata`, executes `/opt/dpi/scripts/sync_env.sh`, and reloads the Docker Compose services without dropping WireGuard tunnels or restarting the VM.
-- **Manual Stack Updates**: You can also use `./base-vpn/deploy.sh` to push local `docker-compose.yml` or container version changes directly over IAP.
+### Step 2: Deploy Container Stack (Zero-Downtime)
+Uploads `docker-compose.yml`, renders `management.json`, injects secrets, and starts the containers on the VM over secure IAP:
+```bash
+./base-vpn/deploy.sh
+```
 
 ### Step 3: Automated Major Version Alerts (Dependabot)
 GitHub Dependabot (`.github/dependabot.yml`) monitors `base-vpn/docker/docker-compose.yml`.
@@ -90,11 +90,10 @@ GitHub Dependabot (`.github/dependabot.yml`) monitors `base-vpn/docker/docker-co
 
 ### Step 4: Inject Google OAuth Credentials
 Once the OAuth Web Client ID and Secret are created in GCP Console (per [`oauth_setup.md`](../base-mgmt/oauth_setup.md)):
-- Option A (via Terraform Metadata): Set `google_oauth_client_id` and `google_oauth_client_secret` in `terraform.tfvars` and run `terraform apply`. The watcher syncs the running VM automatically!
-- Option B (via Secret Manager & helper script):
-  ```bash
-  ./base-vpn/update_oauth.sh "<CLIENT_ID>" "<CLIENT_SECRET>"
-  ```
+```bash
+./base-vpn/update_oauth.sh "<CLIENT_ID>" "<CLIENT_SECRET>"
+```
+This automatically saves credentials to Secret Manager in `base-mgmt` and re-deploys NetBird with the active OAuth provider.
 
 
 
