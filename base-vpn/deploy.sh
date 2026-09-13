@@ -38,11 +38,13 @@ TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 NETBIRD_FQDN="netbird.base.dpi.ait.ac.th"
+PROD_FQDN="netbird.dpi.ait.ac.th"
 ACME_EMAIL="admin@dpi.ait.ac.th"
 SINGLE_ACCOUNT_MODE_DOMAIN="dpi.ait.ac.th"
 
 cat << ENV_EOF > "$TMP_DIR/.env"
 NETBIRD_FQDN="$NETBIRD_FQDN"
+PROD_FQDN="$PROD_FQDN"
 ACME_EMAIL="$ACME_EMAIL"
 GOOGLE_OAUTH_CLIENT_ID="$OAUTH_CLIENT_ID"
 GOOGLE_OAUTH_CLIENT_SECRET="$OAUTH_CLIENT_SECRET"
