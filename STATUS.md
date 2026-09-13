@@ -63,7 +63,7 @@
 
 | Task ID | Task Description | Target Resource | Status | Notes / Output |
 | :---: | :--- | :--- | :---: | :--- |
-| `2.1` | Create Project `base-vpn` & Link Billing | GCP Resource Manager | 🔴 Planned | Inside `base` folder, linked to base billing |
+| `2.1` | Create Project `base-vpn` & Link Billing | `base-vpn` (`945976338321`) | 🟢 Verified | Created via `prj-base-vpn.tf`, billing linked from Secret Manager, lien active |
 | `2.2` | Terraform Infrastructure | `base-vpn/terraform/` | 🔴 Planned | VM (`e2-small`), regional static IP, firewall rules |
 | `2.3` | Decoupled DNS Records | `base-mgmt` Cloud DNS zone | 🔴 Planned | `netbird.base.dpi.ait.ac.th`, `signal.base.dpi.ait.ac.th` |
 | `2.4` | NetBird Docker Stack & Caddy Reverse Proxy | `base-vpn/docker/` | 🔴 Planned | NetBird management, signal, coturn, Caddy TLS |
