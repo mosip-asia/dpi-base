@@ -22,6 +22,7 @@
 base-vpn/
 ├── README.md              # Architecture and operating runbook
 ├── remote-deploy.sh       # Zero-downtime deployer & stack updater (runs locally over IAP)
+├── ssh.sh                 # Fast IAP SSH connector (interactive shell or remote command)
 ├── update_oauth.sh        # Helper script to inject Google OAuth credentials
 ├── netbird/               # Canonical application stack & service manifests (monitored by Dependabot)
 │   ├── deploy.sh          # VM-side service runner and compose manager (/opt/netbird/deploy.sh)
@@ -97,6 +98,13 @@ Once the OAuth Web Client ID and Secret are created in GCP Console (per [`oauth_
 ```
 This automatically saves credentials to Secret Manager in `base-mgmt` and re-deploys NetBird with the active OAuth provider.
 
+### Step 5: Direct VM Access via IAP (`ssh.sh`)
+Connect securely to the VPN VM without exposing port 22 to the public internet:
+```bash
+# Interactive shell session
+./base-vpn/ssh.sh
 
-
-
+# Run remote commands directly
+./base-vpn/ssh.sh "cd /opt/netbird && sudo docker compose ps"
+./base-vpn/ssh.sh "sudo docker logs traefik --tail 50"
+```
