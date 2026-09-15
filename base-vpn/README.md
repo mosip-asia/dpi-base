@@ -33,8 +33,7 @@ base-vpn/
 │   ├── .env.template      # Environment variables template
 │   └── management.json.template # NetBird management & OIDC config template
 └── terraform/             # Decoupled infrastructure code
-    ├── backend.tf         # GCS backend (gs://base-dpi-ait-ac-th-tfstate/base-vpn)
-    ├── main.tf            # Provider configuration
+    ├── main.tf            # Terraform backend & provider configuration
     ├── variables.tf       # Parameter declarations
     ├── network.tf         # Regional static IP & zero-trust firewall rules
     ├── compute.tf         # e2-small VM, service account, and cloud-init rendering

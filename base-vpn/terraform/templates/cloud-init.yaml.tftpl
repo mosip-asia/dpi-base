@@ -30,6 +30,7 @@ write_files:
       Requires=docker.service
       After=docker.service network-online.target
       Wants=network-online.target
+      ConditionPathExists=/opt/netbird/docker-compose.yml
 
       [Service]
       Type=oneshot
