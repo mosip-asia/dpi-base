@@ -71,7 +71,7 @@
 | `2.5` | Zero-Downtime Stack Deployer & Hot Backup | `base-vpn/remote-deploy.sh` | 🟢 Verified | Live over IAP; all 5 containers Up; GCS hot snapshots verified |
 | `2.6` | NetBird OAuth SSO & Admin Approval | Google OAuth2 Web Client | 🟢 Verified Live | Secret Manager keys fetched by VM SA; Google OIDC auth enabled |
 | `2.7` | Canonical Production CNAME Pointer | Parent Zone `dpi-center` (`ait-brainlab-mgmt`) | 🟢 Verified Live | `netbird.dpi.ait.ac.th` CNAME $\rightarrow$ `netbird.base.dpi.ait.ac.th`; Let's Encrypt TLS active |
-| `2.8` | Systemd Service Lifecycle & Condition Guard | `dpi-vpn.service` | 🟡 In-Flight | [Issue #12](https://github.com/mosip-asia/dpi-base/issues/12): `ConditionPathExists` & systemd tracking |
+| `2.8` | Systemd Service Lifecycle & Condition Guard | `dpi-vpn.service` | 🟢 Verified Live | [Issue #12](https://github.com/mosip-asia/dpi-base/issues/12) / [PR #13](https://github.com/mosip-asia/dpi-base/pull/13): `ConditionPathExists` & active tracking verified |
 
 ---
 
