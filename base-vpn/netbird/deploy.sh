@@ -226,6 +226,13 @@ fi
 echo -e "\n${BOLD}--- [6/6] Container Lifecycle & Verification ---${NC}"
 cd "$NETBIRD_DIR"
 
+# Ensure systemd service has ConditionPathExists guard for clean boots
+if [ -f /etc/systemd/system/dpi-vpn.service ] && ! grep -q 'ConditionPathExists' /etc/systemd/system/dpi-vpn.service; then
+  log_info "Patching ConditionPathExists into /etc/systemd/system/dpi-vpn.service..."
+  sudo sed -i '/Wants=network-online.target/a ConditionPathExists=\/opt\/netbird\/docker-compose.yml' /etc/systemd/system/dpi-vpn.service
+  sudo systemctl daemon-reload
+fi
+
 log_info "Pulling latest container images..."
 log_cmd "sudo docker compose pull"
 sudo docker compose pull
@@ -234,7 +241,13 @@ log_info "Starting NetBird containers (sudo docker compose up -d --remove-orphan
 log_cmd "sudo docker compose up -d --remove-orphans"
 sudo docker compose up -d --remove-orphans
 
+log_info "Activating and tracking dpi-vpn systemd service..."
+sudo systemctl reset-failed dpi-vpn.service 2>/dev/null || true
+log_cmd "sudo systemctl start dpi-vpn.service"
+sudo systemctl start dpi-vpn.service
+
 echo -e "\n${BOLD}--- Service Health Status ---${NC}"
+sudo systemctl status dpi-vpn.service --no-pager
 sudo docker compose ps
 
 # Snapshot current state to GCS
