@@ -1,0 +1,14 @@
+# Rancher chart values that do not change between deploys. deploy.sh passes the
+# configured values (hostname, replicas, Let's Encrypt contact and environment,
+# agentTLSMode) with --set from .env.template.
+#
+# K3s ships Traefik as its ingress controller: both class settings must say traefik,
+# or the HTTP-01 solver ingress is never served and no certificate is issued.
+# The chart's Let's Encrypt mode is HTTP-01 only, which is why port 80 stays open.
+ingress:
+  ingressClassName: traefik
+  tls:
+    source: letsEncrypt
+letsEncrypt:
+  ingress:
+    class: traefik
