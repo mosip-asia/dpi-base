@@ -79,7 +79,7 @@
 * **Lead**: Nuttasit (`@BossNP` / `@nuttasit`)
 * **Tracking Issue**: [Issue #5](https://github.com/mosip-asia/dpi-base/issues/5)
 * **Active Branch**: `feat/issue-5-kube-ops`
-* **Pull Request**: Draft, opened from `feat/issue-5-kube-ops`
+* **Pull Request**: [PR #15](https://github.com/mosip-asia/dpi-base/pull/15)
 
 | Task ID | Task Description | Target Resource | Status | Notes / Output |
 | :---: | :--- | :--- | :---: | :--- |
