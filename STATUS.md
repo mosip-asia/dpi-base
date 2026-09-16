@@ -15,7 +15,7 @@
   Phase 0: Cloud Organization & Identity Foundation      [🟢 COMPLETED]
   Phase 1: Foundation Management Plane (base-mgmt)       [🟢 COMPLETED]
   Phase 2: Network Fabric Tier (base-vpn / NetBird)      [🟢 COMPLETED]
-  Phase 3: Multi-Cluster Control Plane (base-kube-ops)   [🔴 PLANNED]
+  Phase 3: Multi-Cluster Control Plane (base-kube-ops)   [🟡 IN PROGRESS]
   Phase 4: Sovereign Workload Initiatives (MOSIP, DLMS)  [🔴 PLANNED]
 ```
 
@@ -75,15 +75,17 @@
 
 ---
 
-### Phase 3: Multi-Cluster Control Plane (`base-kube-ops`) (Planned)
+### Phase 3: Multi-Cluster Control Plane (`base-kube-ops`) (In Progress)
 * **Lead**: Nuttasit (`@BossNP` / `@nuttasit`)
 * **Tracking Issue**: [Issue #5](https://github.com/mosip-asia/dpi-base/issues/5)
+* **Active Branch**: `feat/issue-5-kube-ops`
+* **Pull Request**: Draft, opened from `feat/issue-5-kube-ops`
 
 | Task ID | Task Description | Target Resource | Status | Notes / Output |
 | :---: | :--- | :--- | :---: | :--- |
-| `3.1` | Create Project `base-kube-ops` | GCP Resource Manager | 🔴 Planned | Inside `base` folder, linked to base billing |
-| `3.2` | Provision Rancher Instance | Compute Engine (`e2-standard-4`) | 🔴 Planned | Configured with GCP Instance Schedule (saving ~65-75% compute) |
-| `3.3` | Deploy Central Observability | VictoriaMetrics & Grafana Loki | 🔴 Planned | Ultra-low overhead metrics and chunked log ingestion |
+| `3.1` | Create Project `base-kube-ops` | GCP Resource Manager | 🟡 In Progress | Envelope `base-mgmt/terraform/prj-base-kube-ops.tf` (folder `base`, billing from Secret Manager, lien); applied from the PR branch |
+| `3.2` | Provision Rancher Instance | Compute Engine (`e2-standard-4`) | 🟡 In Progress | `base-kube-ops/terraform/` (static IP, firewall, VM, instance schedule, `rancher.base.dpi.ait.ac.th`) and `base-kube-ops/rancher/deploy.sh` (K3s, cert-manager, Rancher) |
+| `3.3` | Deploy Central Observability | VictoriaMetrics & Grafana Loki | ⏸️ Proposed Split | Proposed in issue #5 to move to its own issue, where its placement (scheduled `base-kube-ops` vs 24/7 `base-vpn`) is decided |
 | `3.4` | Connect to NetBird VPN Mesh | NetBird Client Setup Key | 🔴 Planned | Joins 100.64.0.0/16 overlay mesh for secure cluster communication |
 
 ---
