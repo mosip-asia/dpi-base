@@ -307,8 +307,9 @@ finish() {
   fi
   if [ "$first_login" = "true" ]; then
     echo "  First login pending. Read the generated bootstrap password once, in your own terminal:"
-    echo "    ./base-kube-ops/ssh.sh"
-    echo "    kubectl get secret --namespace cattle-system bootstrap-secret -o go-template='{{.data.bootstrapPassword|base64decode}}{{\"\\n\"}}'"
+    cat <<'EOF'
+    ./base-kube-ops/ssh.sh "kubectl get secret --namespace cattle-system bootstrap-secret -o go-template='{{.data.bootstrapPassword|base64decode}}{{\"\n\"}}'"
+EOF
     echo "  Paste it only into the Rancher login page, then set the admin password (12+ characters)."
   fi
 }

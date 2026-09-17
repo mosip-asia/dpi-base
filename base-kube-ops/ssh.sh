@@ -14,6 +14,9 @@
 #   ./base-kube-ops/ssh.sh "kubectl get nodes"
 #   ./base-kube-ops/ssh.sh "kubectl -n cattle-system get pods"
 #
+# A command may use quotes, pipes and braces, but no "$": sudo -i lets the login shell
+# expand "$" before the command runs.
+#
 # Operators outside the dpi.ait.ac.th organization (@ait.asia) need
 # roles/compute.osLoginExternalUser on the organization (granted 2026-09-13).
 # ==============================================================================
@@ -40,9 +43,13 @@ if [ $# -gt 0 ]; then
     --command="sudo -i -u ubuntu bash -c $(printf '%q' "$*")"
 else
   echo -e "${CYAN}▶ Connecting to $VM_NAME as 'ubuntu' via IAP...${NC}"
+  # Not "-- -t <command>": on Windows gcloud drives PuTTY, which reads a second positional
+  # argument as the port, so the IAP tunnel fails ("Remote side unexpectedly closed network
+  # connection"). With --command gcloud uses plink there and ssh elsewhere; -t still gives a terminal.
   exec gcloud compute ssh "$VM_NAME" \
     --project="$KUBE_OPS_PROJECT" \
     --zone="$ZONE" \
     --tunnel-through-iap \
-    -- -t "sudo -i -u ubuntu"
+    --ssh-flag="-t" \
+    --command="sudo -i -u ubuntu"
 fi

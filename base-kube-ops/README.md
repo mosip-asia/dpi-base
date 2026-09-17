@@ -91,8 +91,7 @@ The deployer installs K3s and cert-manager first. If `rancher.dpi.ait.ac.th` doe
 ### Step 5: First Login
 Rancher generates its bootstrap password. Read it once in your own terminal and paste it only into the Rancher login page:
 ```bash
-./base-kube-ops/ssh.sh
-kubectl get secret --namespace cattle-system bootstrap-secret -o go-template='{{.data.bootstrapPassword|base64decode}}{{"\n"}}'
+./base-kube-ops/ssh.sh "kubectl get secret --namespace cattle-system bootstrap-secret -o go-template='{{.data.bootstrapPassword|base64decode}}{{\"\n\"}}'"
 ```
 Set the admin password (12+ characters) and confirm the server URL `https://rancher.dpi.ait.ac.th`.
 
