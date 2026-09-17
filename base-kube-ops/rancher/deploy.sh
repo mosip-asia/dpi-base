@@ -159,7 +159,16 @@ operator_kubeconfig() {
   step 5 "Operator Kubeconfig for 'ubuntu'"
   install -d -m 0700 -o ubuntu -g ubuntu /home/ubuntu/.kube
   install -m 0600 -o ubuntu -g ubuntu /etc/rancher/k3s/k3s.yaml /home/ubuntu/.kube/config
-  log_info "/home/ubuntu/.kube/config (0600): kubectl and helm work in ./base-kube-ops/ssh.sh sessions."
+  # K3s's kubectl ignores ~/.kube/config unless KUBECONFIG is set: without it, a non-root user
+  # gets "permission denied" on /etc/rancher/k3s/k3s.yaml. ssh.sh opens login shells, which read this.
+  cat > /etc/profile.d/k3s-kubeconfig.sh <<'EOF'
+# Written by /opt/rancher/deploy.sh
+if [ -r "$HOME/.kube/config" ]; then
+  export KUBECONFIG="$HOME/.kube/config"
+fi
+EOF
+  chmod 0644 /etc/profile.d/k3s-kubeconfig.sh
+  log_info "/home/ubuntu/.kube/config (0600) and KUBECONFIG for login shells: kubectl and helm work in ./base-kube-ops/ssh.sh sessions."
 }
 
 ensure_helm() {
@@ -290,7 +299,13 @@ finish() {
   helm list -A
   echo -e "\n${BOLD}--- Rancher ---${NC}"
   echo "  URL: https://${RANCHER_FQDN}"
-  if [ "$(kubectl get settings.management.cattle.io first-login -o jsonpath='{.value}' 2>/dev/null || true)" = "true" ]; then
+  # Before the first login the setting has no value yet; its default ("true") applies.
+  local first_login
+  first_login="$(kubectl get settings.management.cattle.io first-login -o jsonpath='{.value}' 2>/dev/null || true)"
+  if [ -z "$first_login" ]; then
+    first_login="$(kubectl get settings.management.cattle.io first-login -o jsonpath='{.default}' 2>/dev/null || true)"
+  fi
+  if [ "$first_login" = "true" ]; then
     echo "  First login pending. Read the generated bootstrap password once, in your own terminal:"
     echo "    ./base-kube-ops/ssh.sh"
     echo "    kubectl get secret --namespace cattle-system bootstrap-secret -o go-template='{{.data.bootstrapPassword|base64decode}}{{\"\\n\"}}'"
