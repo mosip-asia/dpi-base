@@ -11,7 +11,7 @@ This repository acts as the **single source of truth** and **Platform Engine** f
 It manages:
 1. **Core Management Plane (`base-mgmt`)**: Authoritative Cloud DNS subzones, IAM governance, automated Secret Manager storage, and GCS remote state for platform foundation.
 2. **Network Fabric (`base-vpn`)**: 24/7 NetBird WireGuard mesh VPN connecting all distributed clusters and developer workstations over private overlay IPs (`100.64.0.0/16`).
-3. **Multi-Cluster Control Plane (`dpi-kube-ops`)**: On-demand Rancher Kubernetes manager (with GCP Instance Schedules for 65–75% cost savings) and ultra-low overhead telemetry (VictoriaMetrics + Grafana Loki).
+3. **Multi-Cluster Control Plane (`base-kube-ops`)**: On-demand Rancher Kubernetes manager (with GCP Instance Schedules for 65–75% cost savings) and ultra-low overhead telemetry (VictoriaMetrics + Grafana Loki).
 4. **Landing Zone Automation (`scripts/`)**: Idempotent bootstrap tooling (`bootstrap_domain.sh`, `check_env.sh`) that provisions new Sovereign Domains in 60 seconds.
 
 ---
@@ -30,7 +30,7 @@ flowchart TD
         direction TB
         P_MGMT["📦 Project: base-mgmt<br/>• gs://base-dpi-ait-ac-th-tfstate (Base state ONLY)<br/>• Base secrets (OAuth, VPN tokens)<br/>• Subzone: base.dpi.ait.ac.th"]
         P_VPN["📦 Project: base-vpn (24/7 NetBird Mesh VPN)"]
-        P_KUBE["📦 Project: dpi-kube-ops (Rancher & Observability)"]
+        P_KUBE["📦 Project: base-kube-ops (Rancher & Observability)"]
     end
 
     subgraph FOLDER_MOSIP ["📁 Folder: mosip-asia (Identity Domain)"]

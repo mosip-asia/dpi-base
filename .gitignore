@@ -9,6 +9,9 @@
 !terraform.tfvars.example
 .terraform/
 .terraform.lock.hcl
+# Saved plans (terraform plan -out) embed every attribute the plan read, including data-source secrets
+*.tfplan
+tfplan
 
 # --- Environment & Secret Files ---
 .env

@@ -1,0 +1,10 @@
+# Everything in base-kube-ops ends up on a Linux VM or in Terraform. Keep LF even on
+# Windows checkouts with core.autocrlf=true: a deploy.sh with CRLF line endings fails on the VM.
+* text=auto eol=lf
+*.sh text eol=lf
+*.tf text eol=lf
+*.tftpl text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+.env.template text eol=lf

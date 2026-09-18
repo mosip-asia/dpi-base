@@ -1,0 +1,25 @@
+#cloud-config
+# OS layer only (AGENTS.md security rule 11): packages, time zone, swap and the
+# service directory. K3s, Helm, cert-manager and Rancher are installed and upgraded
+# by ${service_dir}/deploy.sh, pushed over IAP by base-kube-ops/remote-deploy.sh.
+# Never put secrets here: user-data is readable instance metadata.
+
+package_update: true
+packages:
+  - curl
+  - jq
+  - ca-certificates
+  - dnsutils
+
+timezone: Asia/Bangkok
+
+# 2 GB swapfile (issue #5 spec). K3s runs its kubelet with failSwapOn=false.
+swap:
+  filename: /swapfile
+  size: 2147483648
+  maxsize: 2147483648
+
+runcmd:
+  # Service directory owned by the unprivileged system operator (AGENTS.md rule 11)
+  - mkdir -p ${service_dir}
+  - chown ubuntu:ubuntu ${service_dir}
