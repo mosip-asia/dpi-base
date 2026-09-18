@@ -24,6 +24,13 @@ if [ -f "$RANCHER_DIR/.env" ]; then
 fi
 : "${NETBIRD_MANAGEMENT_URL:?NETBIRD_MANAGEMENT_URL missing in .env.template}"
 
+# NetBird 0.78 resolves the sudo invoking user (SUDO_USER) for its profile feature and
+# refuses to run when that user cannot be looked up. OS Login users exist only through
+# NSS, which NetBird's static binary does not use, so run it as plain root instead.
+nb() {
+  env -u SUDO_USER -u SUDO_UID -u SUDO_GID -u SUDO_COMMAND netbird "$@"
+}
+
 CHECK_ONLY=0
 [ "${1:-}" = "--check" ] && CHECK_ONLY=1
 
@@ -42,7 +49,7 @@ fi
 
 ok=1
 if command -v netbird >/dev/null 2>&1; then
-  echo "client: netbird $(netbird version 2>/dev/null || dpkg-query -W -f='${Version}' netbird)"
+  echo "client: netbird $(nb version 2>/dev/null || dpkg-query -W -f='${Version}' netbird)"
 else
   echo "client: MISSING (run ./base-kube-ops/remote-deploy.sh first)"
   ok=0
@@ -61,7 +68,7 @@ else
   echo "management: ${NETBIRD_MANAGEMENT_URL} NOT reachable"
   ok=0
 fi
-status="$(netbird status 2>/dev/null || true)"
+status="$(nb status 2>/dev/null || true)"
 if printf '%s' "$status" | grep -q '^Management: Connected'; then
   echo "already joined:"
   printf '%s\n' "$status" | grep -E '^(NetBird IP|Management|Signal)'
@@ -105,7 +112,7 @@ trap 'rm -f "$keyfile"' EXIT
 
 echo "netbird up --management-url ${NETBIRD_MANAGEMENT_URL} --setup-key-file <memory file>"
 set +e
-netbird up --management-url "$NETBIRD_MANAGEMENT_URL" --setup-key-file "$keyfile"
+nb up --management-url "$NETBIRD_MANAGEMENT_URL" --setup-key-file "$keyfile"
 rc=$?
 set -e
 rm -f "$keyfile"
@@ -116,13 +123,13 @@ if [ "$rc" -ne 0 ]; then
 fi
 
 for _ in $(seq 1 12); do
-  if netbird status 2>/dev/null | grep -q '^Management: Connected'; then
+  if nb status 2>/dev/null | grep -q '^Management: Connected'; then
     break
   fi
   sleep 5
 done
-netbird status | grep -E '^(NetBird IP|Management|Signal|Relays|Peers)' || true
-if netbird status | grep -q '^Management: Connected'; then
+nb status | grep -E '^(NetBird IP|Management|Signal|Relays|Peers)' || true
+if nb status | grep -q '^Management: Connected'; then
   echo "joined."
   pause_if_terminal
   exit 0

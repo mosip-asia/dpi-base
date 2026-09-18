@@ -247,6 +247,13 @@ ensure_cert_manager() {
   log_info "cert-manager ${CERT_MANAGER_VERSION} ready."
 }
 
+# NetBird 0.78 resolves the sudo invoking user (SUDO_USER) for its profile feature and refuses
+# to run when that user cannot be looked up; OS Login users exist only through NSS, which the
+# static binary does not use. Run it as plain root.
+nb() {
+  env -u SUDO_USER -u SUDO_UID -u SUDO_GID -u SUDO_COMMAND netbird "$@"
+}
+
 # The mesh client is installed and pinned here; the join itself needs a setup key and is done
 # once by base-kube-ops/netbird-join.sh (nothing secret ever lands in this file or on the VM).
 ensure_netbird_client() {
@@ -270,11 +277,11 @@ ensure_netbird_client() {
     log_info "NetBird ${NETBIRD_VERSION} installed and held."
   fi
   if ! systemctl is-active --quiet netbird; then
-    netbird service install >/dev/null 2>&1 || true
-    netbird service start >/dev/null 2>&1 || systemctl start netbird
+    nb service install >/dev/null 2>&1 || true
+    nb service start >/dev/null 2>&1 || systemctl start netbird
   fi
-  if netbird status 2>/dev/null | grep -q '^Management: Connected'; then
-    log_info "NetBird joined: $(netbird status 2>/dev/null | grep '^NetBird IP' | tr -s ' ')"
+  if nb status 2>/dev/null | grep -q '^Management: Connected'; then
+    log_info "NetBird joined: $(nb status 2>/dev/null | grep '^NetBird IP' | tr -s ' ')"
   else
     log_warn "NetBird client ready but not joined yet: run ./base-kube-ops/netbird-join.sh (README: Join the NetBird mesh)."
   fi
@@ -448,7 +455,7 @@ finish() {
   k3s --version | awk 'NR==1'
   helm list -A
   echo -e "\n${BOLD}--- NetBird ---${NC}"
-  netbird status 2>/dev/null | grep -E '^(NetBird IP|Management)' | sed 's/^/  /' || echo "  not joined"
+  nb status 2>/dev/null | grep -E '^(NetBird IP|Management)' | sed 's/^/  /' || echo "  not joined"
   echo -e "\n${BOLD}--- Rancher ---${NC}"
   echo "  URL: https://${RANCHER_FQDN}"
   if [ "$RANCHER_BASE_FQDN" != "$RANCHER_FQDN" ]; then
