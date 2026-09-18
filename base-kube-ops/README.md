@@ -36,7 +36,9 @@ base-kube-ops/
 ├── scripts/
 │   ├── check_record.sh    # DNS-over-HTTPS check of the A record and the canonical CNAME
 │   ├── check_rancher_health.sh # /healthz and certificate issuer, from the laptop
-│   └── precommit-check.sh # Blocks secrets, state, billing IDs and CRLF before a commit
+│   ├── precommit-check.sh # Blocks secrets, state, billing IDs and CRLF before a commit
+│   ├── rehearsal_k3s.sh   # Downstream autonomy rehearsal: throwaway K3s import, Rancher stop/start, cleanup
+│   └── rehearsal_k3s_startup.sh # Startup script of the throwaway VM (K3s + serial-console heartbeat)
 └── terraform/             # Infrastructure (state: gs://base-dpi-ait-ac-th-tfstate, prefix base-kube-ops)
     ├── main.tf            # Terraform backend & provider (google 5.45.2, exact pin)
     ├── variables.tf       # Parameter declarations with public defaults
@@ -117,6 +119,26 @@ The deployer installs and pins the NetBird client but never sees a setup key. Jo
 3. Expected: `Management: Connected` and `NetBird IP: 100.64.x.y/16`; the dashboard lists `base-kube-ops-vm` as online. Later: `./base-kube-ops/ssh.sh "netbird status"`.
 
 A rebuilt VM needs a new key. Until a dedicated policy exists, the dashboard's `Default` policy (all peers to all peers) applies to this host as well.
+
+### Step 8: Downstream autonomy rehearsal (`scripts/rehearsal_k3s.sh`)
+Proves what the schedule relies on: an imported cluster keeps working while Rancher is off and reconnects by itself, and that agents trust the public certificate (`agentTLSMode: system-store`, empty `cacerts`). About 45 minutes; start before 17:00 on a weekday. One sub-command per step, in this order:
+```bash
+./base-kube-ops/scripts/rehearsal_k3s.sh create       # throwaway K3s VM in this project (e2-medium, no service account)
+./base-kube-ops/scripts/rehearsal_k3s.sh wait         # follows its serial console until READY
+./base-kube-ops/scripts/rehearsal_k3s.sh ssh-check    # first IAP SSH, sudo, kubectl
+# Rancher → Cluster Management → Import Existing → Generic → name rehearsal-k3s → Create;
+# paste the plain "curl -sfL … | kubectl apply -f -" command into base-kube-ops/.local/rancher-import.secret (git-ignored)
+./base-kube-ops/scripts/rehearsal_k3s.sh import       # registers the cluster; it turns Active in 1-3 min
+./base-kube-ops/scripts/rehearsal_k3s.sh probe        # baseline: the cluster runs a new deployment
+./base-kube-ops/scripts/rehearsal_k3s.sh rancher-stop # Rancher off
+./base-kube-ops/scripts/rehearsal_k3s.sh probe        # the cluster still takes new work on its own
+./base-kube-ops/scripts/rehearsal_k3s.sh rancher-start   # Rancher back (not 17:45-18:45); the cluster reconnects by itself
+./base-kube-ops/scripts/rehearsal_k3s.sh status       # both VMs, heartbeat, agent-tls-mode, cluster Ready
+./base-kube-ops/scripts/rehearsal_k3s.sh delete       # throwaway VM and the local registration file
+./base-kube-ops/scripts/rehearsal_k3s.sh forget       # removes rehearsal-k3s from Rancher
+./base-kube-ops/scripts/rehearsal_k3s.sh verify-clean # REHEARSAL CLEAN
+```
+`status` and the heartbeat on the throwaway's serial console show the cluster's state without SSH while Rancher is off. Run on the predecessor project on 2026-09-14 (17 hours off, agent reconnected by itself).
 
 ---
 

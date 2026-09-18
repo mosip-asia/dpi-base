@@ -22,7 +22,8 @@ fail() { echo "  FAIL  $1"; FAILED=1; }
 
 echo "Ignore rules"
 for f in base-kube-ops/terraform/terraform.tfstate base-kube-ops/terraform/plan.tfplan base-kube-ops/terraform/tfplan \
-         base-kube-ops/terraform/.terraform/x base-kube-ops/terraform/terraform.tfvars base-kube-ops/rancher/.env; do
+         base-kube-ops/terraform/.terraform/x base-kube-ops/terraform/terraform.tfvars base-kube-ops/rancher/.env \
+         base-kube-ops/.local/rancher-import.secret; do
   git check-ignore -q "$f" && pass "ignored: $f" || fail "NOT ignored: $f (restore the rule in .gitignore)"
 done
 
