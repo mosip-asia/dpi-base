@@ -86,7 +86,7 @@
 | `3.1` | Create Project `base-kube-ops` | GCP Resource Manager | 🟢 Verified | Envelope `base-mgmt/terraform/prj-base-kube-ops.tf` applied 2026-09-17 from the PR branch: project in folder `base`, billing from Secret Manager, Compute API, deletion lien. Budget `base-platform-monthly` (THB 3,500, 50/80/100 % alerts) on "DPI Center - Base Platform" |
 | `3.2` | Provision Rancher Instance | Compute Engine (`e2-standard-4`) | 🟢 Verified Live | `base-kube-ops/terraform/` applied 2026-09-17 (static IP `34.21.247.4`, firewall, VM, instance schedule 08:30–18:30, `rancher.base.dpi.ait.ac.th`); `rancher/deploy.sh` installed K3s v1.36.3+k3s1, cert-manager v1.21.1 and Rancher 2.15.1 on `https://rancher.dpi.ait.ac.th` (Let's Encrypt, `agentTLSMode: system-store`); first login done; scheduled stop and start observed |
 | `3.3` | Deploy Central Observability | VictoriaMetrics & Grafana Loki | ⏸️ Proposed Split | Proposed in issue #5 to move to its own issue, where its placement (scheduled `base-kube-ops` vs 24/7 `base-vpn`) is decided |
-| `3.4` | Connect to NetBird VPN Mesh | NetBird Client Setup Key | 🔴 Planned | Joins 100.64.0.0/16 overlay mesh for secure cluster communication |
+| `3.4` | Connect to NetBird VPN Mesh | NetBird Client Setup Key | 🟢 Verified | Joined 2026-09-18 with a one-off setup key (`k3s-control-enroll`, group `kube-ops`, ephemeral off) typed once over IAP (`base-kube-ops/netbird-join.sh`); client 0.78.1 pinned by `deploy.sh`; `base-kube-ops-vm` = `100.70.173.242` on the mesh (network `100.70.0.0/16`), Management and Signal connected |
 
 ---
 

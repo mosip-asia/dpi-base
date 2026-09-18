@@ -17,7 +17,7 @@
   * **Server URL**: `rancher.dpi.ait.ac.th`, a CNAME in parent zone `dpi-center` (`ait-brainlab-mgmt`), created by hand like `netbird.dpi.ait.ac.th`. Downstream clusters store this name.
   * **Base Infrastructure**: `rancher.base.dpi.ait.ac.th`, an A record in `base-mgmt` zone `dpi-base`, owned by `terraform/dns.tf`. It has its own certificate and answers with a permanent redirect (301) to the server URL, so either name works in a browser. Google sign-in and downstream agents use the server URL only.
 * **Observability** (VictoriaMetrics, Grafana Loki, Grafana OSS): proposed in issue #5 to move to its own issue, where its placement is decided.
-* **NetBird Mesh**: the host joins the `100.64.0.0/16` overlay (STATUS task 3.4) with a one-off setup key from the dashboard, sent over IAP by `netbird-join.sh`; the client version is pinned in `rancher/.env.template`. See "Join the NetBird mesh" below.
+* **NetBird Mesh**: the host joins the NetBird overlay (STATUS task 3.4; this network is `100.70.0.0/16`, `base-kube-ops-vm` = `100.70.173.242`) with a one-off setup key typed once through `netbird-join.sh` over IAP; the client version is pinned in `rancher/.env.template`. See "Join the NetBird mesh" below.
 
 ---
 
