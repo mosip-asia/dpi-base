@@ -4,7 +4,7 @@
 # ==============================================================================
 # Uploads the Rancher stack configuration to base-kube-ops-vm over the Google IAP
 # tunnel, then runs the VM-side deployer (/opt/rancher/deploy.sh), which installs or
-# upgrades K3s, Helm, cert-manager and Rancher at the versions in rancher/.env.template.
+# upgrades K3s, Helm, cert-manager, the NetBird client and Rancher at the versions in rancher/.env.template.
 #
 # Usage:
 #   ./base-kube-ops/remote-deploy.sh                            # install or apply unchanged pins
@@ -68,7 +68,7 @@ done
 winpath() { if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf '%s' "$1"; fi; }
 
 # A CRLF deploy.sh fails on the VM. base-kube-ops/.gitattributes keeps LF; this catches stray edits.
-FILES=("$STACK_DIR/.env.template" "$STACK_DIR/rancher-values.yaml" "$STACK_DIR/deploy.sh")
+FILES=("$STACK_DIR/.env.template" "$STACK_DIR/rancher-values.yaml" "$STACK_DIR/netbird-join.sh" "$STACK_DIR/deploy.sh")
 for f in "${FILES[@]}"; do
   [ -f "$f" ] || { log_fail "missing $f"; exit 1; }
   if [ "$(tr -cd '\r' < "$f" | wc -c)" -gt 0 ]; then
@@ -89,10 +89,11 @@ echo -e "Source Dir:  ${BOLD}$STACK_DIR${NC}"
 echo -e "Remote Dir:  ${BOLD}$REMOTE_DIR${NC}"
 echo ""
 
-log_cmd "gcloud compute scp --project=$KUBE_OPS_PROJECT --zone=$ZONE --tunnel-through-iap rancher/{.env.template,rancher-values.yaml,deploy.sh} $VM_NAME:/tmp/"
+log_cmd "gcloud compute scp --project=$KUBE_OPS_PROJECT --zone=$ZONE --tunnel-through-iap rancher/{.env.template,rancher-values.yaml,netbird-join.sh,deploy.sh} $VM_NAME:/tmp/"
 gcloud compute scp --project="$KUBE_OPS_PROJECT" --zone="$ZONE" --tunnel-through-iap \
   "$(winpath "$STACK_DIR/.env.template")" \
   "$(winpath "$STACK_DIR/rancher-values.yaml")" \
+  "$(winpath "$STACK_DIR/netbird-join.sh")" \
   "$(winpath "$STACK_DIR/deploy.sh")" \
   "$VM_NAME:/tmp/"
 log_info "Files uploaded to /tmp on $VM_NAME."
@@ -113,7 +114,7 @@ case "$RC" in
     ;;
   3)
     log_step "⏳ Waiting for DNS"
-    echo -e "K3s and cert-manager are deployed. Rancher waits until its server URL resolves to the VM (see the message above)."
+    echo -e "K3s, cert-manager and the NetBird client are deployed. Rancher waits until its server URL resolves to the VM (see the message above)."
     ;;
   *)
     log_step "❌ Deployment Failed (exit $RC)"

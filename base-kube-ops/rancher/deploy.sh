@@ -3,7 +3,7 @@
 # 🐮 DPI Center — Rancher Host Deployer (runs on the VM: /opt/rancher/deploy.sh)
 # ==============================================================================
 # Owns the application lifecycle on base-kube-ops-vm (AGENTS.md security rule 11):
-# K3s, Helm, cert-manager and Rancher at the versions pinned in .env.template.
+# K3s, Helm, cert-manager, the NetBird client and Rancher at the versions pinned in .env.template.
 # Idempotent: a re-run with unchanged pins changes nothing; a bumped pin upgrades
 # that component in place. It never recreates the VM.
 #
@@ -13,7 +13,7 @@
 # Exit codes: 0 deployed and healthy
 #             1 failure
 #             3 waiting for DNS: RANCHER_FQDN does not resolve to this VM yet.
-#               K3s and cert-manager are in place; re-run once the CNAME exists.
+#               K3s, cert-manager and the NetBird client are in place; re-run once the CNAME exists.
 # ==============================================================================
 set -euo pipefail
 
@@ -36,7 +36,7 @@ log_info() { echo -e "${GREEN}✔ [VM]${NC} $1"; }
 log_cmd()  { echo -e "${CYAN}▶ [VM RUN]${NC} ${DIM}$1${NC}"; }
 log_warn() { echo -e "${YELLOW}⚠ [VM WARN]${NC} $1"; }
 log_fail() { echo -e "${RED}✖ [VM FAIL]${NC} $1"; }
-TOTAL_STEPS=13
+TOTAL_STEPS=14
 step() { echo -e "\n${BOLD}--- [$1/${TOTAL_STEPS}] $2 ---${NC}"; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -85,14 +85,14 @@ last_a_record() {
 sync_manifests() {
   step 1 "Syncing Manifests from /tmp"
   local f
-  for f in .env.template rancher-values.yaml; do
+  for f in .env.template rancher-values.yaml netbird-join.sh; do
     if [ -f "/tmp/$f" ]; then
       log_cmd "mv /tmp/$f $RANCHER_DIR/$f"
       mv "/tmp/$f" "$RANCHER_DIR/$f"
     fi
   done
   # No operator-owned staging files may linger (AGENTS.md rule 11)
-  rm -f /tmp/.env.template /tmp/rancher-values.yaml /tmp/deploy.sh 2>/dev/null || true
+  rm -f /tmp/.env.template /tmp/rancher-values.yaml /tmp/netbird-join.sh /tmp/deploy.sh 2>/dev/null || true
 }
 
 load_config() {
@@ -108,7 +108,7 @@ load_config() {
   local v missing=""
   for v in RANCHER_FQDN RANCHER_BASE_FQDN ACME_EMAIL LETSENCRYPT_ENVIRONMENT K3S_VERSION HELM_VERSION \
            CERT_MANAGER_VERSION RANCHER_CHART_REPO RANCHER_CHART_REPO_URL RANCHER_CHART_VERSION \
-           RANCHER_REPLICAS AGENT_TLS_MODE; do
+           RANCHER_REPLICAS AGENT_TLS_MODE NETBIRD_VERSION NETBIRD_MANAGEMENT_URL; do
     [ -n "${!v:-}" ] || missing="$missing $v"
   done
   if [ -n "$missing" ]; then
@@ -247,8 +247,41 @@ ensure_cert_manager() {
   log_info "cert-manager ${CERT_MANAGER_VERSION} ready."
 }
 
+# The mesh client is installed and pinned here; the join itself needs a setup key and is done
+# once by base-kube-ops/netbird-join.sh (nothing secret ever lands in this file or on the VM).
+ensure_netbird_client() {
+  step 8 "NetBird client ${NETBIRD_VERSION}"
+  local installed
+  installed="$(dpkg-query -W -f='${Version}' netbird 2>/dev/null || true)"
+  if [ "$installed" = "$NETBIRD_VERSION" ]; then
+    log_info "NetBird ${NETBIRD_VERSION} already installed."
+  else
+    if [ ! -f /usr/share/keyrings/netbird-archive-keyring.gpg ]; then
+      log_cmd "add the NetBird apt repository (pkgs.netbird.io)"
+      curl -fsSL https://pkgs.netbird.io/debian/public.key \
+        | gpg --batch --yes --dearmor -o /usr/share/keyrings/netbird-archive-keyring.gpg
+    fi
+    echo 'deb [signed-by=/usr/share/keyrings/netbird-archive-keyring.gpg] https://pkgs.netbird.io/debian stable main' \
+      > /etc/apt/sources.list.d/netbird.list
+    log_cmd "apt-get install netbird=${NETBIRD_VERSION} (current: ${installed:-none})"
+    apt-get update -qq
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --allow-downgrades "netbird=${NETBIRD_VERSION}"
+    apt-mark hold netbird >/dev/null
+    log_info "NetBird ${NETBIRD_VERSION} installed and held."
+  fi
+  if ! systemctl is-active --quiet netbird; then
+    netbird service install >/dev/null 2>&1 || true
+    netbird service start >/dev/null 2>&1 || systemctl start netbird
+  fi
+  if netbird status 2>/dev/null | grep -q '^Management: Connected'; then
+    log_info "NetBird joined: $(netbird status 2>/dev/null | grep '^NetBird IP' | tr -s ' ')"
+  else
+    log_warn "NetBird client ready but not joined yet: run ./base-kube-ops/netbird-join.sh (README: Join the NetBird mesh)."
+  fi
+}
+
 dns_gate() {
-  step 8 "DNS Gate (${RANCHER_FQDN} must resolve to this VM)"
+  step 9 "DNS Gate (${RANCHER_FQDN} must resolve to this VM)"
   local my_ip g c base
   my_ip="$(curl -sf -H 'Metadata-Flavor: Google' \
     'http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip' || true)"
@@ -264,12 +297,12 @@ dns_gate() {
   echo "  Rancher is installed only once its server URL resolves, because Let's Encrypt validates that name"
   echo "  and downstream clusters store it. Ask for the CNAME in parent zone dpi-center (ait-brainlab-mgmt):"
   echo "    ${RANCHER_FQDN}. 300 IN CNAME ${RANCHER_BASE_FQDN}."
-  echo "  K3s and cert-manager are in place. Re-run ./base-kube-ops/remote-deploy.sh once the name resolves."
+  echo "  K3s, cert-manager and the NetBird client are in place. Re-run ./base-kube-ops/remote-deploy.sh once the name resolves."
   exit 3
 }
 
 ensure_rancher() {
-  step 9 "Rancher ${RANCHER_CHART_VERSION} (${RANCHER_CHART_REPO})"
+  step 10 "Rancher ${RANCHER_CHART_VERSION} (${RANCHER_CHART_REPO})"
   local installed reason
   installed="$(helm -n cattle-system list --filter '^rancher$' -o json 2>/dev/null | jq -r '.[0].chart // empty' | sed 's/^rancher-//' || true)"
   if [ -n "$installed" ] && [ "$installed" != "$RANCHER_CHART_VERSION" ]; then
@@ -304,7 +337,7 @@ ensure_rancher() {
 # URL: Rancher's Google sign-in and the downstream agents work on one hostname only. Skipped
 # when both names are the same (for example a temporary override in .env).
 ensure_base_redirect() {
-  step 10 "Base-name redirect (${RANCHER_BASE_FQDN} -> https://${RANCHER_FQDN})"
+  step 11 "Base-name redirect (${RANCHER_BASE_FQDN} -> https://${RANCHER_FQDN})"
   if [ "$RANCHER_BASE_FQDN" = "$RANCHER_FQDN" ]; then
     log_warn "RANCHER_BASE_FQDN equals RANCHER_FQDN: no redirect; removing one if present."
     kubectl -n cattle-system delete ingress,middlewares.traefik.io rancher-base-redirect --ignore-not-found
@@ -355,7 +388,7 @@ EOF
 }
 
 certificate_gate() {
-  step 11 "Certificate Gate (Let's Encrypt ${LETSENCRYPT_ENVIRONMENT})"
+  step 12 "Certificate Gate (Let's Encrypt ${LETSENCRYPT_ENVIRONMENT})"
   local deadline
   deadline=$(( $(date +%s) + 600 ))
   until [ "$(kubectl -n cattle-system get certificate tls-rancher-ingress \
@@ -382,7 +415,7 @@ certificate_gate() {
 }
 
 health_check() {
-  step 12 "Health Check (through the loopback: GCE has no hairpin NAT)"
+  step 13 "Health Check (through the loopback: GCE has no hairpin NAT)"
   local code issuer redirect
   code="$(curl -sk --max-time 15 --resolve "${RANCHER_FQDN}:443:127.0.0.1" -o /dev/null -w '%{http_code}' \
     "https://${RANCHER_FQDN}/healthz" || true)"
@@ -406,14 +439,16 @@ health_check() {
 }
 
 finish() {
-  step 13 "Ownership & Summary"
+  step 14 "Ownership & Summary"
   chown -R ubuntu:ubuntu "$RANCHER_DIR"
-  chmod 0755 "$RANCHER_DIR/deploy.sh"
+  chmod 0755 "$RANCHER_DIR/deploy.sh" "$RANCHER_DIR/netbird-join.sh"
   chmod 0644 "$RANCHER_DIR/.env.template" "$RANCHER_DIR/rancher-values.yaml"
   if [ -f "$RANCHER_DIR/.env" ]; then chmod 0600 "$RANCHER_DIR/.env"; fi
   echo -e "\n${BOLD}--- Components ---${NC}"
   k3s --version | awk 'NR==1'
   helm list -A
+  echo -e "\n${BOLD}--- NetBird ---${NC}"
+  netbird status 2>/dev/null | grep -E '^(NetBird IP|Management)' | sed 's/^/  /' || echo "  not joined"
   echo -e "\n${BOLD}--- Rancher ---${NC}"
   echo "  URL: https://${RANCHER_FQDN}"
   if [ "$RANCHER_BASE_FQDN" != "$RANCHER_FQDN" ]; then
@@ -446,6 +481,7 @@ main() {
   operator_kubeconfig
   ensure_helm
   ensure_cert_manager
+  ensure_netbird_client
   dns_gate
   ensure_rancher
   ensure_base_redirect

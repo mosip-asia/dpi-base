@@ -17,7 +17,7 @@
   * **Server URL**: `rancher.dpi.ait.ac.th`, a CNAME in parent zone `dpi-center` (`ait-brainlab-mgmt`), created by hand like `netbird.dpi.ait.ac.th`. Downstream clusters store this name.
   * **Base Infrastructure**: `rancher.base.dpi.ait.ac.th`, an A record in `base-mgmt` zone `dpi-base`, owned by `terraform/dns.tf`. It has its own certificate and answers with a permanent redirect (301) to the server URL, so either name works in a browser. Google sign-in and downstream agents use the server URL only.
 * **Observability** (VictoriaMetrics, Grafana Loki, Grafana OSS): proposed in issue #5 to move to its own issue, where its placement is decided.
-* **NetBird Mesh**: joining the `100.64.0.0/16` overlay (STATUS task 3.4) follows once the setup-key handling is agreed in issue #5.
+* **NetBird Mesh**: the host joins the `100.64.0.0/16` overlay (STATUS task 3.4) with a one-off setup key from the dashboard, sent over IAP by `netbird-join.sh`; the client version is pinned in `rancher/.env.template`. See "Join the NetBird mesh" below.
 
 ---
 
@@ -27,8 +27,10 @@ base-kube-ops/
 ├── README.md              # Architecture and operating runbook (this file)
 ├── remote-deploy.sh       # Uploads rancher/ over IAP and runs deploy.sh on the VM
 ├── ssh.sh                 # IAP SSH connector as 'ubuntu' (interactive shell or remote command)
+├── netbird-join.sh        # Prompts for a NetBird setup key and joins the VM to the mesh over IAP
 ├── rancher/               # Application stack, synced flat to /opt/rancher on the VM
-│   ├── deploy.sh          # VM-side deployer: K3s, Helm, cert-manager, Rancher (idempotent)
+│   ├── deploy.sh          # VM-side deployer: K3s, Helm, cert-manager, NetBird client, Rancher (idempotent)
+│   ├── netbird-join.sh    # VM-side join: reads the setup key from stdin, runs netbird up (nothing stored)
 │   ├── .env.template      # Single source of truth: names, version pins, Rancher settings (no secrets)
 │   └── rancher-values.yaml # Static Rancher chart values (Traefik ingress, Let's Encrypt)
 ├── scripts/
@@ -102,6 +104,19 @@ Set the admin password (12+ characters) and confirm the server URL `https://ranc
 ./base-kube-ops/ssh.sh "kubectl -n cattle-system get pods"
 ./base-kube-ops/ssh.sh "helm list -A"
 ```
+
+### Step 7: Join the NetBird mesh (STATUS task 3.4)
+The deployer installs and pins the NetBird client but never sees a setup key. Joining is a one-off action:
+1. In [`https://netbird.dpi.ait.ac.th`](https://netbird.dpi.ait.ac.th) (Admin role) → **Setup Keys** → **Add key**: name `k3s-control-enroll`, type **one-off** (usage limit 1), expiry 1 day, auto-assigned group `kube-ops` (create it if needed), **Ephemeral peers off**. Ephemeral peers are removed after 10 minutes offline, and this VM is off every night.
+2. From the laptop:
+   ```bash
+   ./base-kube-ops/netbird-join.sh --check   # optional: proves the path to the VM without a key
+   ./base-kube-ops/netbird-join.sh           # paste the key at the hidden prompt
+   ```
+   The key travels only inside the IAP SSH channel and is used once by `/opt/rancher/netbird-join.sh`; NetBird keeps its own peer identity in `/etc/netbird/config.json` (root only).
+3. Expected: `Management: Connected` and `NetBird IP: 100.64.x.y/16`; the dashboard lists `base-kube-ops-vm` as online. Later: `./base-kube-ops/ssh.sh "netbird status"`.
+
+A rebuilt VM needs a new key. Until a dedicated policy exists, the dashboard's `Default` policy (all peers to all peers) applies to this host as well.
 
 ---
 
