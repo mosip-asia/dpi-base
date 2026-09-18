@@ -110,10 +110,10 @@ The deployer installs and pins the NetBird client but never sees a setup key. Jo
 1. In [`https://netbird.dpi.ait.ac.th`](https://netbird.dpi.ait.ac.th) (Admin role) → **Setup Keys** → **Add key**: name `k3s-control-enroll`, type **one-off** (usage limit 1), expiry 1 day, auto-assigned group `kube-ops` (create it if needed), **Ephemeral peers off**. Ephemeral peers are removed after 10 minutes offline, and this VM is off every night.
 2. From the laptop:
    ```bash
-   ./base-kube-ops/netbird-join.sh --check   # optional: proves the path to the VM without a key
-   ./base-kube-ops/netbird-join.sh           # paste the key at the hidden prompt
+   ./base-kube-ops/netbird-join.sh --check   # optional: client, daemon and management URL on the VM
+   ./base-kube-ops/netbird-join.sh           # opens a terminal on the VM; paste the key at its hidden prompt
    ```
-   The key travels only inside the IAP SSH channel and is used once by `/opt/rancher/netbird-join.sh`; NetBird keeps its own peer identity in `/etc/netbird/config.json` (root only).
+   On Windows the terminal is a PuTTY window (right-click pastes); on macOS and Linux it is the current terminal. The key is typed only there, used once by `/opt/rancher/netbird-join.sh` from a file in memory, and never stored; NetBird keeps its own peer identity in `/etc/netbird/config.json` (root only).
 3. Expected: `Management: Connected` and `NetBird IP: 100.64.x.y/16`; the dashboard lists `base-kube-ops-vm` as online. Later: `./base-kube-ops/ssh.sh "netbird status"`.
 
 A rebuilt VM needs a new key. Until a dedicated policy exists, the dashboard's `Default` policy (all peers to all peers) applies to this host as well.

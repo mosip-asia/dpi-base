@@ -2,14 +2,15 @@
 # ==============================================================================
 # 🕸️ DPI Center — NetBird join (runs on the VM: /opt/rancher/netbird-join.sh)
 # ==============================================================================
-# Joins this host to the NetBird mesh with a setup key read from standard input,
-# piped over the IAP SSH channel by base-kube-ops/netbird-join.sh. The key is used
-# once and never stored: it goes to a file in memory (/dev/shm) for the length of
-# one `netbird up` call. NetBird keeps only its own peer identity afterwards
-# (/etc/netbird/config.json, root only).
+# Joins this host to the NetBird mesh with a setup key typed at a hidden prompt in
+# the operator's terminal (opened by base-kube-ops/netbird-join.sh over IAP). The
+# key is used once and never stored: it sits in a file in memory (/dev/shm) for the
+# length of one `netbird up` call. NetBird keeps only its own peer identity
+# afterwards (/etc/netbird/config.json, root only).
 #
-# Usage (from the VM, as root):  printf '%s\n' "<setup key>" | ./netbird-join.sh
-#         --check                 only report what arrived on stdin; no join
+# Usage (on the VM, as root):
+#   sudo /opt/rancher/netbird-join.sh            # prompt for the key and join
+#   sudo /opt/rancher/netbird-join.sh --check    # prerequisites only, no key, no join
 # ==============================================================================
 set -euo pipefail
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
@@ -26,38 +27,74 @@ fi
 CHECK_ONLY=0
 [ "${1:-}" = "--check" ] && CHECK_ONLY=1
 
+# The PuTTY window closes as soon as this script ends; keep the result readable.
+pause_if_terminal() {
+  if [ -t 0 ]; then
+    read -r -p "Press Enter to close this session." _ || true
+  fi
+}
+
 if [ "$(id -u)" -ne 0 ]; then
   echo "run as root: sudo $0"
+  pause_if_terminal
   exit 1
 fi
 
-# The first non-empty line that is not the "y" gcloud feeds into plink on Windows.
-key=""
-while IFS= read -r line || [ -n "$line" ]; do
-  line="${line%$'\r'}"
-  case "$line" in
-    ""|y|Y) continue ;;
-  esac
-  key="$line"
-  break
-done
-if [ -z "$key" ]; then
-  echo "no setup key arrived on standard input"
+ok=1
+if command -v netbird >/dev/null 2>&1; then
+  echo "client: netbird $(netbird version 2>/dev/null || dpkg-query -W -f='${Version}' netbird)"
+else
+  echo "client: MISSING (run ./base-kube-ops/remote-deploy.sh first)"
+  ok=0
+fi
+if systemctl is-active --quiet netbird; then
+  echo "daemon: active"
+else
+  echo "daemon: NOT active"
+  ok=0
+fi
+mgmt_host="${NETBIRD_MANAGEMENT_URL#*://}"
+mgmt_host="${mgmt_host%%/*}"
+if curl -sf --max-time 10 -o /dev/null "https://${mgmt_host}/"; then
+  echo "management: ${NETBIRD_MANAGEMENT_URL} reachable"
+else
+  echo "management: ${NETBIRD_MANAGEMENT_URL} NOT reachable"
+  ok=0
+fi
+status="$(netbird status 2>/dev/null || true)"
+if printf '%s' "$status" | grep -q '^Management: Connected'; then
+  echo "already joined:"
+  printf '%s\n' "$status" | grep -E '^(NetBird IP|Management|Signal)'
+  pause_if_terminal
+  exit 0
+fi
+echo "status: $(printf '%s' "$status" | grep -E '^Daemon status' || echo 'not joined')"
+
+if [ "$CHECK_ONLY" = "1" ]; then
+  if [ "$ok" = "1" ]; then
+    echo "check: ready to join (create the setup key, then run ./base-kube-ops/netbird-join.sh)"
+    exit 0
+  fi
+  echo "check: NOT ready"
+  exit 1
+fi
+if [ "$ok" != "1" ]; then
+  pause_if_terminal
+  exit 1
+fi
+if [ ! -t 0 ]; then
+  echo "the setup key must be typed in a terminal: use ./base-kube-ops/netbird-join.sh"
   exit 2
 fi
-if [ "$CHECK_ONLY" = "1" ]; then
-  echo "check only: received a key of ${#key} characters; nothing joined"
-  exit 0
-fi
 
-if ! command -v netbird >/dev/null 2>&1; then
-  echo "netbird client is not installed: run ./base-kube-ops/remote-deploy.sh first"
-  exit 1
-fi
-if netbird status 2>/dev/null | grep -q '^Management: Connected'; then
-  echo "already joined:"
-  netbird status | grep -E '^(NetBird IP|Management|Signal)'
-  exit 0
+key=""
+read -rs -p "NetBird setup key (input hidden, then Enter): " key
+echo
+key="${key//[[:space:]]/}"
+if [ -z "$key" ]; then
+  echo "no key entered"
+  pause_if_terminal
+  exit 2
 fi
 
 keyfile="$(mktemp -p /dev/shm netbird-key.XXXXXX)"
@@ -67,8 +104,16 @@ unset key
 trap 'rm -f "$keyfile"' EXIT
 
 echo "netbird up --management-url ${NETBIRD_MANAGEMENT_URL} --setup-key-file <memory file>"
+set +e
 netbird up --management-url "$NETBIRD_MANAGEMENT_URL" --setup-key-file "$keyfile"
+rc=$?
+set -e
 rm -f "$keyfile"
+if [ "$rc" -ne 0 ]; then
+  echo "netbird up failed (exit $rc)"
+  pause_if_terminal
+  exit "$rc"
+fi
 
 for _ in $(seq 1 12); do
   if netbird status 2>/dev/null | grep -q '^Management: Connected'; then
@@ -77,4 +122,11 @@ for _ in $(seq 1 12); do
   sleep 5
 done
 netbird status | grep -E '^(NetBird IP|Management|Signal|Relays|Peers)' || true
-netbird status | grep -q '^Management: Connected'
+if netbird status | grep -q '^Management: Connected'; then
+  echo "joined."
+  pause_if_terminal
+  exit 0
+fi
+echo "not connected yet; check the NetBird dashboard and 'netbird status' on the VM."
+pause_if_terminal
+exit 1

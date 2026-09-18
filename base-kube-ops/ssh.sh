@@ -43,13 +43,26 @@ if [ $# -gt 0 ]; then
     --command="sudo -i -u ubuntu bash -c $(printf '%q' "$*")"
 else
   echo -e "${CYAN}▶ Connecting to $VM_NAME as 'ubuntu' via IAP...${NC}"
-  # Not "-- -t <command>": on Windows gcloud drives PuTTY, which reads a second positional
-  # argument as the port, so the IAP tunnel fails ("Remote side unexpectedly closed network
-  # connection"). With --command gcloud uses plink there and ssh elsewhere; -t still gives a terminal.
-  exec gcloud compute ssh "$VM_NAME" \
-    --project="$KUBE_OPS_PROJECT" \
-    --zone="$ZONE" \
-    --tunnel-through-iap \
-    --ssh-flag="-t" \
-    --command="sudo -i -u ubuntu"
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*)
+      # On Windows gcloud drives PuTTY. A second positional argument would be read as the
+      # port, and a --command runs through plink with a closed standard input, so the
+      # shell must come from PuTTY's own remote-command file (-m) in a PuTTY window.
+      CMD_FILE="$(mktemp)"
+      printf 'sudo -i -u ubuntu\n' > "$CMD_FILE"
+      gcloud compute ssh "$VM_NAME" \
+        --project="$KUBE_OPS_PROJECT" \
+        --zone="$ZONE" \
+        --tunnel-through-iap \
+        -- -t -m "$(cygpath -w "$CMD_FILE")"
+      rm -f "$CMD_FILE"
+      ;;
+    *)
+      exec gcloud compute ssh "$VM_NAME" \
+        --project="$KUBE_OPS_PROJECT" \
+        --zone="$ZONE" \
+        --tunnel-through-iap \
+        -- -t "sudo -i -u ubuntu"
+      ;;
+  esac
 fi

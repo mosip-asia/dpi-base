@@ -2,16 +2,17 @@
 # ==============================================================================
 # 🕸️ DPI Center — Join base-kube-ops-vm to the NetBird mesh (from the laptop)
 # ==============================================================================
-# Asks for a NetBird setup key (input hidden) and sends it over the IAP SSH channel
-# to /opt/rancher/netbird-join.sh on the VM, which runs `netbird up` with it. The
-# key is never shown, logged, or written to disk on either side. Create the key in
-# the NetBird dashboard first (README: "Join the NetBird mesh").
+# Opens a terminal on the VM over IAP that runs /opt/rancher/netbird-join.sh, which
+# asks for the NetBird setup key with input hidden and runs `netbird up`. The key
+# is typed only into that terminal and is never shown, logged, or written to disk.
+# Create the key in the NetBird dashboard first (README: "Join the NetBird mesh").
 #
 # Usage:
-#   ./base-kube-ops/netbird-join.sh            # prompt for the key and join
-#   ./base-kube-ops/netbird-join.sh --check    # only test the path to the VM; no join
+#   ./base-kube-ops/netbird-join.sh            # terminal on the VM; paste the key there
+#   ./base-kube-ops/netbird-join.sh --check    # prerequisites on the VM; no key, no join
 #
-# On Windows run it from Git Bash, not from PowerShell's bash (WSL).
+# On Windows (Git Bash) gcloud opens the terminal in a PuTTY window; on macOS and
+# Linux it runs in the current terminal. Not from PowerShell's bash (WSL).
 # ==============================================================================
 set -euo pipefail
 
@@ -26,32 +27,38 @@ VM_NAME="base-kube-ops-vm"
 ZONE="asia-southeast1-b"
 REMOTE_SCRIPT="/opt/rancher/netbird-join.sh"
 
-CHECK_ARG=""
 case "${1:-}" in
-  --check) CHECK_ARG="--check" ;;
+  --check)
+    exec gcloud compute ssh "$VM_NAME" \
+      --project="$KUBE_OPS_PROJECT" \
+      --zone="$ZONE" \
+      --tunnel-through-iap \
+      --command="sudo $REMOTE_SCRIPT --check"
+    ;;
   "") ;;
-  -h|--help) sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  -h|--help) sed -n '2,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
   *) echo "unknown argument: $1"; exit 2 ;;
 esac
 
-if [ -n "$CHECK_ARG" ]; then
-  KEY="check-only-placeholder"
-else
-  read -rs -p "NetBird setup key (input hidden, then Enter): " KEY
-  echo
-fi
-if [ -z "$KEY" ]; then
-  echo "no key entered"
-  exit 2
-fi
-
-set +e
-printf '%s\n' "$KEY" | gcloud compute ssh "$VM_NAME" \
-  --project="$KUBE_OPS_PROJECT" \
-  --zone="$ZONE" \
-  --tunnel-through-iap \
-  --command="sudo $REMOTE_SCRIPT $CHECK_ARG"
-RC=$?
-set -e
-unset KEY
-exit "$RC"
+# gcloud on Windows runs a command through plink with a closed standard input, so a
+# prompt needs the PuTTY window instead: PuTTY takes the remote command from a file (-m).
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*)
+    CMD_FILE="$(mktemp)"
+    printf 'sudo %s\n' "$REMOTE_SCRIPT" > "$CMD_FILE"
+    echo "A PuTTY window opens and asks for the setup key (input hidden). Paste it there and press Enter."
+    gcloud compute ssh "$VM_NAME" \
+      --project="$KUBE_OPS_PROJECT" \
+      --zone="$ZONE" \
+      --tunnel-through-iap \
+      -- -t -m "$(cygpath -w "$CMD_FILE")"
+    rm -f "$CMD_FILE"
+    ;;
+  *)
+    exec gcloud compute ssh "$VM_NAME" \
+      --project="$KUBE_OPS_PROJECT" \
+      --zone="$ZONE" \
+      --tunnel-through-iap \
+      -- -t "sudo $REMOTE_SCRIPT"
+    ;;
+esac
