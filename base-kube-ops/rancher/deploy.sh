@@ -311,7 +311,7 @@ ensure_base_redirect() {
     return
   fi
   local base_re
-  base_re="$(printf '%s' "$RANCHER_BASE_FQDN" | sed 's/\./\./g')"   # dots are literal in the regex
+  base_re="$(printf '%s' "$RANCHER_BASE_FQDN" | sed 's/\./\\./g')"   # dots are literal in the regex
   log_cmd "kubectl apply: Middleware and Ingress rancher-base-redirect (certificate from Issuer rancher)"
   kubectl apply -f - <<EOF
 apiVersion: traefik.io/v1alpha1
