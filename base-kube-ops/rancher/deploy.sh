@@ -36,7 +36,7 @@ log_info() { echo -e "${GREEN}✔ [VM]${NC} $1"; }
 log_cmd()  { echo -e "${CYAN}▶ [VM RUN]${NC} ${DIM}$1${NC}"; }
 log_warn() { echo -e "${YELLOW}⚠ [VM WARN]${NC} $1"; }
 log_fail() { echo -e "${RED}✖ [VM FAIL]${NC} $1"; }
-TOTAL_STEPS=12
+TOTAL_STEPS=13
 step() { echo -e "\n${BOLD}--- [$1/${TOTAL_STEPS}] $2 ---${NC}"; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -300,8 +300,62 @@ ensure_rancher() {
   kubectl -n cattle-system rollout status deploy/rancher --timeout=15m
 }
 
+# The base name (our own A record) gets a certificate and a permanent redirect to the server
+# URL: Rancher's Google sign-in and the downstream agents work on one hostname only. Skipped
+# when both names are the same (for example a temporary override in .env).
+ensure_base_redirect() {
+  step 10 "Base-name redirect (${RANCHER_BASE_FQDN} -> https://${RANCHER_FQDN})"
+  if [ "$RANCHER_BASE_FQDN" = "$RANCHER_FQDN" ]; then
+    log_warn "RANCHER_BASE_FQDN equals RANCHER_FQDN: no redirect; removing one if present."
+    kubectl -n cattle-system delete ingress,middlewares.traefik.io rancher-base-redirect --ignore-not-found
+    return
+  fi
+  local base_re
+  base_re="$(printf '%s' "$RANCHER_BASE_FQDN" | sed 's/\./\./g')"   # dots are literal in the regex
+  log_cmd "kubectl apply: Middleware and Ingress rancher-base-redirect (certificate from Issuer rancher)"
+  kubectl apply -f - <<EOF
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: rancher-base-redirect
+  namespace: cattle-system
+spec:
+  redirectRegex:
+    regex: '^https?://${base_re}(/.*)?\$'
+    replacement: 'https://${RANCHER_FQDN}\${1}'
+    permanent: true
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rancher-base-redirect
+  namespace: cattle-system
+  annotations:
+    cert-manager.io/issuer: rancher
+    cert-manager.io/issuer-kind: Issuer
+    traefik.ingress.kubernetes.io/router.middlewares: cattle-system-rancher-base-redirect@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: ${RANCHER_BASE_FQDN}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rancher
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - ${RANCHER_BASE_FQDN}
+      secretName: tls-rancher-base-redirect
+EOF
+}
+
 certificate_gate() {
-  step 10 "Certificate Gate (Let's Encrypt ${LETSENCRYPT_ENVIRONMENT})"
+  step 11 "Certificate Gate (Let's Encrypt ${LETSENCRYPT_ENVIRONMENT})"
   local deadline
   deadline=$(( $(date +%s) + 600 ))
   until [ "$(kubectl -n cattle-system get certificate tls-rancher-ingress \
@@ -314,11 +368,22 @@ certificate_gate() {
     sleep 15
   done
   log_info "Certificate tls-rancher-ingress is Ready."
+  if [ "$RANCHER_BASE_FQDN" != "$RANCHER_FQDN" ]; then
+    deadline=$(( $(date +%s) + 300 ))
+    until [ "$(kubectl -n cattle-system get certificate tls-rancher-base-redirect         -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" = "True" ]; do
+      if [ "$(date +%s)" -ge "$deadline" ]; then
+        log_warn "Certificate tls-rancher-base-redirect not Ready after 5 minutes; the redirect works, but with Traefik's default certificate until it is."
+        break
+      fi
+      sleep 15
+    done
+    [ "$(date +%s)" -lt "$deadline" ] && log_info "Certificate tls-rancher-base-redirect is Ready."
+  fi
 }
 
 health_check() {
-  step 11 "Health Check (through the loopback: GCE has no hairpin NAT)"
-  local code issuer
+  step 12 "Health Check (through the loopback: GCE has no hairpin NAT)"
+  local code issuer redirect
   code="$(curl -sk --max-time 15 --resolve "${RANCHER_FQDN}:443:127.0.0.1" -o /dev/null -w '%{http_code}' \
     "https://${RANCHER_FQDN}/healthz" || true)"
   if [ "$code" != "200" ]; then
@@ -331,10 +396,17 @@ health_check() {
   if [ "$LETSENCRYPT_ENVIRONMENT" = "production" ] && printf '%s' "$issuer" | grep -q STAGING; then
     log_warn "A STAGING certificate is still served although production is configured; it renews to production shortly."
   fi
+  if [ "$RANCHER_BASE_FQDN" != "$RANCHER_FQDN" ]; then
+    redirect="$(curl -sk --max-time 15 --resolve "${RANCHER_BASE_FQDN}:443:127.0.0.1" -o /dev/null       -w '%{http_code} %{redirect_url}' "https://${RANCHER_BASE_FQDN}/" || true)"
+    case "$redirect" in
+      "301 https://${RANCHER_FQDN}/"*) log_info "https://${RANCHER_BASE_FQDN}/ -> ${redirect}" ;;
+      *) log_warn "https://${RANCHER_BASE_FQDN}/ answered '${redirect:-nothing}' instead of 301 to https://${RANCHER_FQDN}/" ;;
+    esac
+  fi
 }
 
 finish() {
-  step 12 "Ownership & Summary"
+  step 13 "Ownership & Summary"
   chown -R ubuntu:ubuntu "$RANCHER_DIR"
   chmod 0755 "$RANCHER_DIR/deploy.sh"
   chmod 0644 "$RANCHER_DIR/.env.template" "$RANCHER_DIR/rancher-values.yaml"
@@ -344,6 +416,9 @@ finish() {
   helm list -A
   echo -e "\n${BOLD}--- Rancher ---${NC}"
   echo "  URL: https://${RANCHER_FQDN}"
+  if [ "$RANCHER_BASE_FQDN" != "$RANCHER_FQDN" ]; then
+    echo "  Base name: https://${RANCHER_BASE_FQDN} (redirects to the URL above)"
+  fi
   # Before the first login the setting has no value yet; its default ("true") applies.
   local first_login
   first_login="$(kubectl get settings.management.cattle.io first-login -o jsonpath='{.value}' 2>/dev/null || true)"
@@ -373,6 +448,7 @@ main() {
   ensure_cert_manager
   dns_gate
   ensure_rancher
+  ensure_base_redirect
   certificate_gate
   health_check
   finish

@@ -15,7 +15,7 @@
 * **Public Static IP**: `base-kube-ops-static-ip`. Ports 80 (Let's Encrypt HTTP-01) and 443 (UI, API, downstream agents) are public; 22 only through IAP; 6443 closed, because downstream agents only dial out to 443.
 * **DNS FQDNs**:
   * **Server URL**: `rancher.dpi.ait.ac.th`, a CNAME in parent zone `dpi-center` (`ait-brainlab-mgmt`), created by hand like `netbird.dpi.ait.ac.th`. Downstream clusters store this name.
-  * **Base Infrastructure**: `rancher.base.dpi.ait.ac.th`, an A record in `base-mgmt` zone `dpi-base`, owned by `terraform/dns.tf`.
+  * **Base Infrastructure**: `rancher.base.dpi.ait.ac.th`, an A record in `base-mgmt` zone `dpi-base`, owned by `terraform/dns.tf`. It has its own certificate and answers with a permanent redirect (301) to the server URL, so either name works in a browser. Google sign-in and downstream agents use the server URL only.
 * **Observability** (VictoriaMetrics, Grafana Loki, Grafana OSS): proposed in issue #5 to move to its own issue, where its placement is decided.
 * **NetBird Mesh**: joining the `100.64.0.0/16` overlay (STATUS task 3.4) follows once the setup-key handling is agreed in issue #5.
 
@@ -150,9 +150,15 @@ Rancher does **not** maintain an isolated user directory. It connects to the cen
 
 * **Shared Credentials**: `google-oauth-client-id` and `google-oauth-client-secret` in `base-mgmt` Secret Manager.
 * **Provider**: Generic OIDC against `https://accounts.google.com`. Rancher's built-in Google provider expects a Google Workspace admin and a service-account key, which the Cloud Identity Free organization does not use.
-* **Redirect URIs**: `https://rancher.dpi.ait.ac.th/verify-auth` (server URL) and `https://rancher.base.dpi.ait.ac.th/verify-auth`.
-* **Accepted Domains**: `@dpi.ait.ac.th`, `@ait.asia`, `@ait.ac.th`, and `@gmail.com` (enabled by the **External** OAuth consent screen).
+* **Redirect URI**: `https://rancher.dpi.ait.ac.th/verify-auth` only. Rancher stores a single redirect URL and ties each sign-in to that hostname (its login state lives in a cookie for that host), so the base name, which redirects to the server URL, needs none.
+* **Accepted Domains**: `@dpi.ait.ac.th`, `@ait.asia`, `@ait.ac.th`, and `@gmail.com` (enabled by the **External** OAuth consent screen, which must be **Published**; in Testing only listed test users can sign in).
 * **Kubernetes RBAC Access Mode**: **"Restricted"**. Anyone with an accepted Google account can authenticate, but **they are granted zero permissions until an administrator explicitly binds their account to specific clusters or projects**.
+* **Setup order** (verified against Rancher 2.15.1):
+  1. Users & Authentication → Role Templates → Global: make **User-Base** (login only) the default for new users. Rancher's default gives new external users **Standard User**, which can create clusters.
+  2. Open Rancher on the server URL (not the base name) and configure the Generic OIDC provider there; the form pre-fills the redirect URL from the address bar.
+  3. Enabling forces the access mode to "Allow any valid Users"; switch it to **Restricted** afterwards.
+  4. Do the test login of the enable step as `admin@dpi.ait.ac.th`: that Google identity merges into the built-in `admin` user, so the top account belongs to the organization. Then grant **Administrator** to the operating admins (`akraradet@ait.asia`, `nuttasit@ait.asia`) for daily work, which keeps the audit log per person.
+  5. Keep the local `admin` password as the emergency login if Google is unavailable.
 
 See [`base-mgmt/oauth_setup.md`](../base-mgmt/oauth_setup.md) for the client configuration.
 
