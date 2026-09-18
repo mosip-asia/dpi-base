@@ -340,15 +340,24 @@ cmd_delete(){
 
 cmd_forget(){
   [ "$(rancher_code)" = "200" ] || { fail "Rancher does not answer at ${RANCHER_URL}"; return 1; }
-  rssh_run "sudo k3s kubectl -n fleet-default delete clusters.provisioning.cattle.io ${CLUSTER_NAME} --ignore-not-found --timeout=120s" | sed 's/^/  /'
+  # Rancher's objects carry the generated id (c-xxxxx), not the display name: the provisioning
+  # cluster in fleet-default and the management cluster share that id for an imported cluster.
+  local id
+  id="$(rssh_run "sudo k3s kubectl get clusters.management.cattle.io -o jsonpath='{.items[?(@.spec.displayName==\"${CLUSTER_NAME}\")].metadata.name}'" | tail -n1 | tr -d ' ')"
+  if [ -z "${id}" ]; then
+    pass "${CLUSTER_NAME} is not listed in Rancher (nothing to forget)"; return 0
+  fi
+  info "${CLUSTER_NAME} is cluster ${id}; deleting its provisioning object (what the UI's Delete does)"
+  rssh_run "sudo k3s kubectl -n fleet-default delete clusters.provisioning.cattle.io ${id} --ignore-not-found --timeout=120s" | sed 's/^/  /'
   local i
-  for i in $(seq 1 12); do
-    if ! rssh_run "sudo k3s kubectl get clusters.management.cattle.io -o jsonpath='{.items[*].spec.displayName}'" | tr ' ' '\n' | grep -qx "${CLUSTER_NAME}"; then
-      pass "${CLUSTER_NAME} is gone from Rancher"; return 0
+  for i in $(seq 1 30); do
+    if ! rssh_run "sudo k3s kubectl get clusters.management.cattle.io -o jsonpath='{.items[*].metadata.name}'" | tr ' ' '\n' | grep -qx "${id}"; then
+      pass "${CLUSTER_NAME} (${id}) is gone from Rancher"; return 0
     fi
+    [ "${i}" = 6 ] && info "still removing (finalizers run while the downstream API is unreachable); waiting up to 5 min"
     sleep 10
   done
-  fail "${CLUSTER_NAME} still listed in Rancher after 2 min (Cluster Management in the UI)"
+  fail "${CLUSTER_NAME} (${id}) still listed in Rancher after 5 min (Cluster Management in the UI)"
 }
 
 cmd_verify_clean(){
