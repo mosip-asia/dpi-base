@@ -135,22 +135,67 @@ ensure_swap() {
   log_info "2GB swapfile activated."
 }
 
+# K3s names its node after the hostname it sees at start. On GCE the hostname changes twice
+# during every boot (cloud-init sets the short name, then the guest agent sets the FQDN), so
+# an unpinned K3s can register a second node after a reboot: the old node's pods are evicted
+# after 5 minutes and stay "Terminating" forever (seen 2026-09-18). Pin the node name to the
+# instance name through K3s's config file, which it reads at every start.
+k3s_config() {
+  local tmp
+  K3S_NODE_NAME="$(curl -sf -H 'Metadata-Flavor: Google' \
+    'http://metadata.google.internal/computeMetadata/v1/instance/name' || hostname | cut -d. -f1)"
+  K3S_CONFIG_CHANGED=0
+  install -d -m 0755 /etc/rancher/k3s
+  tmp="$(mktemp)"
+  cat > "$tmp" <<EOF
+# Written by /opt/rancher/deploy.sh; K3s reads this file at every start.
+node-name: "${K3S_NODE_NAME}"
+write-kubeconfig-mode: "0600"
+EOF
+  if ! cmp -s "$tmp" /etc/rancher/k3s/config.yaml; then
+    install -m 0644 "$tmp" /etc/rancher/k3s/config.yaml
+    K3S_CONFIG_CHANGED=1
+  fi
+  rm -f "$tmp"
+}
+
+# Node objects left behind by earlier hostname changes: deleting them also removes their
+# stuck pods. A single-node cluster by design, so any other node object is stale.
+remove_stale_nodes() {
+  local n ready
+  for n in $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
+    [ "$n" = "$K3S_NODE_NAME" ] && continue
+    ready="$(kubectl get node "$n" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)"
+    if [ "$ready" = "True" ]; then
+      log_warn "Unexpected second Ready node ${n}: left in place, please investigate."
+      continue
+    fi
+    log_warn "Deleting stale node object ${n} (its Terminating pods go with it)."
+    kubectl delete node "$n" --timeout=60s
+  done
+}
+
 ensure_k3s() {
   step 4 "K3s ${K3S_VERSION}"
   local current="none"
+  k3s_config
   if command -v k3s >/dev/null 2>&1; then
     current="$(k3s --version 2>/dev/null | awk 'NR==1 {print $3}' || true)"
   fi
   if [ "$current" = "$K3S_VERSION" ]; then
-    log_info "K3s ${K3S_VERSION} already installed."
+    log_info "K3s ${K3S_VERSION} already installed (node name ${K3S_NODE_NAME})."
+    if [ "$K3S_CONFIG_CHANGED" = "1" ]; then
+      log_cmd "systemctl restart k3s   (config.yaml changed; running pods are kept)"
+      systemctl restart k3s
+    fi
   else
-    log_info "Installing K3s ${K3S_VERSION} (current: ${current})..."
-    log_cmd "curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${K3S_VERSION} sh -s - server --write-kubeconfig-mode 600"
-    curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="$K3S_VERSION" \
-      INSTALL_K3S_EXEC="server --write-kubeconfig-mode 600" sh -s -
+    log_info "Installing K3s ${K3S_VERSION} (current: ${current}, node name ${K3S_NODE_NAME})..."
+    log_cmd "curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${K3S_VERSION} sh -s - server"
+    curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="$K3S_VERSION" INSTALL_K3S_EXEC="server" sh -s -
   fi
-  log_info "Waiting for the node and Traefik..."
-  timeout 300 bash -c 'until kubectl get nodes --no-headers 2>/dev/null | grep -q " Ready "; do sleep 5; done'
+  log_info "Waiting for node ${K3S_NODE_NAME} and Traefik..."
+  timeout 300 bash -c "until [ \"\$(kubectl get node '$K3S_NODE_NAME' -o jsonpath='{.status.conditions[?(@.type==\"Ready\")].status}' 2>/dev/null)\" = True ]; do sleep 5; done"
+  remove_stale_nodes
   timeout 300 bash -c 'until kubectl -n kube-system get deploy traefik >/dev/null 2>&1; do sleep 5; done'
   kubectl -n kube-system rollout status deploy/traefik --timeout=300s
 }
