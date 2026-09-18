@@ -10,7 +10,7 @@
 * **Kubernetes Manager**: Rancher Community Server (Apache 2.0, $0 license fee) on a single-node K3s, for MOSIP platform compatibility.
 * **Compute Host**: `base-kube-ops-vm`, `e2-standard-4` (4 vCPU, 16 GB RAM + 2 GB swap), 50 GB `pd-balanced`, Ubuntu 24.04 LTS, Shielded VM, in `asia-southeast1-b`.
 * **Provisioning Method**: Terraform for the infrastructure; `cloud-init` for the OS layer only; `rancher/deploy.sh`, pushed over IAP, installs and upgrades K3s, Helm, cert-manager and Rancher without recreating the VM.
-* **Operating Mode**: **On-Demand / Scheduled**. A GCP instance schedule starts the VM at 08:30 and stops it at 18:30 `Asia/Bangkok`, Monday to Friday (first stop 2026-09-17, first start 2026-09-18, Rancher healthy again by itself). Downstream K3s clusters keep running while Rancher is off; this was proven on the predecessor project on 2026-09-14 (17 hours off, the cluster agent reconnected by itself).
+* **Operating Mode**: **On-Demand / Scheduled**. A GCP instance schedule starts the VM at 08:30 and stops it at 18:30 `Asia/Bangkok`, Monday to Friday (first stop 2026-09-17, first start 2026-09-18, Rancher healthy again by itself). Downstream K3s clusters keep running while Rancher is off; proven on the predecessor project on 2026-09-14 (17 hours off) and again on this host on 2026-09-18 (`scripts/rehearsal_k3s.sh`: the cluster scheduled new work with Rancher off and its agent reconnected by itself 2 minutes after Rancher was back).
 * **K3s Node Name**: pinned to the instance name (`base-kube-ops-vm`) in `/etc/rancher/k3s/config.yaml`, written by `deploy.sh`. On GCE the hostname changes twice during every boot (short name from cloud-init, then the internal FQDN from the guest agent), and an unpinned K3s registers a second node after a reboot, leaving the old node's pods stuck in `Terminating`. The deployer also deletes such stale node objects.
 * **Public Static IP**: `base-kube-ops-static-ip`. Ports 80 (Let's Encrypt HTTP-01) and 443 (UI, API, downstream agents) are public; 22 only through IAP; 6443 closed, because downstream agents only dial out to 443.
 * **DNS FQDNs**:
@@ -138,7 +138,7 @@ Proves what the schedule relies on: an imported cluster keeps working while Ranc
 ./base-kube-ops/scripts/rehearsal_k3s.sh forget       # removes rehearsal-k3s from Rancher
 ./base-kube-ops/scripts/rehearsal_k3s.sh verify-clean # REHEARSAL CLEAN
 ```
-`status` and the heartbeat on the throwaway's serial console show the cluster's state without SSH while Rancher is off. Run on the predecessor project on 2026-09-14 (17 hours off, agent reconnected by itself).
+`status` and the heartbeat on the throwaway's serial console show the cluster's state without SSH while Rancher is off. Runs: predecessor project 2026-09-14 (17 hours off); this host 2026-09-18 (Rancher off 16:08–16:14, new deployment scheduled meanwhile, agent reconnected by itself at 16:15, `REHEARSAL CLEAN`).
 
 ---
 

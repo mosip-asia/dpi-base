@@ -121,13 +121,22 @@
 | **TLS Certificates** | Let's Encrypt (`netbird.base.*`, `netbird.dpi.*`) | Traefik v3 (`/opt/netbird/traefik/acme.json`) | 🟢 Valid through Dec 2026 |
 | **Docker Compose Stack** | 5 containers (Traefik, Dashboard, Signal, Mgmt, Relay) | `/opt/netbird` (`base-vpn-vm`) | 🟢 5/5 Up & Healthy |
 | **Automated State Backup** | `gs://base-dpi-ait-ac-th-tfstate/backups/netbird/` | GCS (`store.db`, `acme.json`) | 🟢 Active (6-hourly cron) |
+| **Control Plane Project** | `base-kube-ops` (`365194416805`) | Folder `base` | 🟢 Active (deletion lien) |
+| **Rancher Static IP** | `34.21.247.4` | `base-kube-ops` (`asia-southeast1`) | 🟢 Allocated & Attached |
+| **Rancher DNS Endpoint** | `rancher.base.dpi.ait.ac.th.` | `base-mgmt` (Zone `dpi-base`) | 🟢 Resolving to `34.21.247.4`; redirects to the canonical name |
+| **Rancher Canonical Endpoint** | `rancher.dpi.ait.ac.th.` | `ait-brainlab-mgmt` (Zone `dpi-center`) | 🟢 Active CNAME with Let's Encrypt TLS |
+| **Rancher Host VM** | `base-kube-ops-vm` (`e2-standard-4`, 08:30–18:30 Mon–Fri, ~$48/mo) | `base-kube-ops` (`asia-southeast1-b`) | 🟢 Running on schedule (2GB Swap active) |
+| **Rancher Stack** | K3s `v1.36.3+k3s1`, cert-manager `v1.21.1`, Rancher `2.15.1` | `/opt/rancher` (`base-kube-ops-vm`) | 🟢 Healthy; Google SSO (Generic OIDC) |
+| **Rancher NetBird Peer** | `base-kube-ops-vm` = `100.70.173.242` | NetBird mesh (`100.70.0.0/16`) | 🟢 Connected |
+| **Base Platform Budget** | `base-platform-monthly` (THB 3,500; alerts 50/80/100 %) | Billing "DPI Center - Base Platform" | 🟢 Active |
 
 ---
 
 ## 🎯 Immediate Next Actions
 
-1. **Kick off Phase 3 (`base-kube-ops`)**:
-   - Work with `@BossNP` on branch `feat/issue-5-kube-ops` (linked to [Issue #5](https://github.com/mosip-asia/dpi-base/issues/5)) for Rancher & VictoriaMetrics / Loki observability plane.
+1. **Close Phase 3 (`base-kube-ops`)**:
+   - Rancher is live on `https://rancher.dpi.ait.ac.th` with Google SSO and the NetBird join; [PR #15](https://github.com/mosip-asia/dpi-base/pull/15) is ready for review (branch `feat/issue-5-kube-ops`, [Issue #5](https://github.com/mosip-asia/dpi-base/issues/5)).
+   - Follow-ups: publish the OAuth consent screen (Branding page) so `@ait.ac.th` and `@gmail.com` accounts can sign in; move task 3.3 (VictoriaMetrics / Loki) to its own issue; [Issue #14](https://github.com/mosip-asia/dpi-base/issues/14) (sandbox cluster over NetBird).
 2. **Review & Prioritize Proposals (Unconfirmed)**:
    - [Issue #10](https://github.com/mosip-asia/dpi-base/issues/10): `[GitOps] Configure Terraform Service Account (base-mgmt-terraform) & Workload Identity Federation for base Domain` (`status: unconfirmed`)
    - [Issue #11](https://github.com/mosip-asia/dpi-base/issues/11): `[Platform] Design and Publish "domain-template" Repository for Sovereign Domain Onboarding` (`status: unconfirmed`)
