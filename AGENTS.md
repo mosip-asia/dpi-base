@@ -50,6 +50,8 @@ AI assistants and documentation templates MUST strictly adhere to the DPI domain
 - **`api.dpi.ait.ac.th`**: Public API gateway endpoints.
 - **Domain Identifier Invariant (`DOMAIN_NAME`)**:
   The domain slug defines the GCP Folder name, the Cloud DNS namespace (`<domain>.dpi.ait.ac.th`), and the mandatory prefix for all projects in that domain (`<domain>-mgmt`, `<domain>-k3s`). The slug must use lowercase alphanumeric characters and hyphens only, with a strict maximum of **24 characters** to keep `<domain>-mgmt` under GCP's 30-character project ID limit.
+- **Infrastructure Repository Naming Invariant (`<domain>-infra`)**:
+  Every Sovereign Domain maintains its cloud infrastructure, Terraform landing zone, and deployment manifests in a dedicated repository named `<domain>-infra` (e.g. `face-pad-infra`, `ait-vc-infra`, `dlms-infra`). The platform control plane repository is `dpi-base`. Application, model, and research repositories (e.g. `face-pad-model`, `face-pad-datasets`, `face-pad-eval-framework`) remain pure code repositories without cloud infrastructure envelopes.
 
 ### 5. Automation & Landing Zone Bootstrap Tooling
 - **Root & Stack Environment Configuration**:

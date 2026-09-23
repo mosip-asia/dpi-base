@@ -25,6 +25,9 @@ Every major initiative, research grant, or partner demonstrator operates as an a
 
 **The Core Rule**: `base-mgmt` is strictly scoped to `base`. Workload domains **never** share state buckets, secrets, or billing accounts with `base`.
 
+### 📦 Repository Architecture (`<domain>-infra`)
+Each Sovereign Domain maintains its cloud infrastructure, Terraform modules, and project envelopes in a dedicated GitHub repository following the **`<domain>-infra`** standard (e.g. `face-pad-infra`, `ait-vc-infra`, `dlms-infra`). The platform control plane repository is `dpi-base`. Application code, AI models, and dataset tools live in their own application repositories (e.g. `face-pad-model`, `face-pad-datasets`) without cloud infrastructure state.
+
 ---
 
 ## 🏛️ Step 1: Grant Billing Account Setup (Model A)
