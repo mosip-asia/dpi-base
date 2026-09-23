@@ -108,13 +108,12 @@ Before running the bootstrap, understand exactly what inputs are consumed and wh
 | **Terraform State** | **🪣 GCS State Bucket** | `gs://<domain>-dpi-ait-ac-th-tfstate` in `asia-southeast1` with **Object Versioning ON**. |
 | **Secret Vault** | **🔑 Secret Manager Safe** | Secret `billing-account-id` created in project `<domain>-mgmt`. |
 | | **🔒 Secret Version 1** | Seeded with authoritative `BILLING_ACCOUNT_ID` (permanent, read-only for future Terraform). |
-| **Local Workspace** | **📁 Code Directory** | `<domain>-mgmt/terraform/` prepared for deployment. |
+| **Local Workspace** | **📁 Code Directory** | `<domain>-mgmt/` scaffolded from `template-mgmt/` via `scripts/scaffold_domain.sh`. |
 | | **📄 `terraform.tfvars`** | Auto-generated `<domain>-mgmt/terraform/terraform.tfvars` with folder ID, domain, and admin arrays. |
 
 ---
 
 ### 🛠️ Bootstrap Execution Steps
-
 
 1. **Prepare `.env` at Repository Root**:
    ```bash
@@ -134,21 +133,28 @@ Before running the bootstrap, understand exactly what inputs are consumed and wh
    FOLDER_ADMINS="akraradet@ait.asia,nuttasit@ait.asia"
    ```
 
-3. **Validate Pre-Flight Configuration**:
+3. **(Optional) Pre-Scaffold Local Directory**:
+   You can generate `<domain>-mgmt/` locally without cloud credentials at any time:
+   ```bash
+   ./scripts/scaffold_domain.sh
+   ```
+   *(Note: If you skip this, `bootstrap_domain.sh` will automatically invoke `scaffold_domain.sh` for you).*
+
+4. **Validate Pre-Flight Configuration**:
    ```bash
    ./scripts/check_env.sh
    ```
 
-4. **Preview with Dry-Run (`--plan`)**:
+5. **Preview with Dry-Run (`--plan`)**:
    ```bash
    ./scripts/bootstrap_domain.sh --plan
    ```
 
-5. **Execute Idempotent Apply**:
+6. **Execute Idempotent Apply**:
    ```bash
    ./scripts/bootstrap_domain.sh
    ```
-   *Provisions folder, `<domain>-mgmt` project, billing association, core APIs, and `gs://<domain>-dpi-ait-ac-th-tfstate`.*
+   *Auto-scaffolds `<domain>-mgmt/` (if missing), provisions GCP folder, creates `<domain>-mgmt` project, links billing account, enables core APIs, creates `gs://<domain>-dpi-ait-ac-th-tfstate`, seeds Secret Manager, and writes `terraform.tfvars`.*
 
 ---
 

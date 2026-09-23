@@ -12,7 +12,7 @@ It manages:
 1. **Core Management Plane (`base-mgmt`)**: Authoritative Cloud DNS subzones, IAM governance, automated Secret Manager storage, and GCS remote state for platform foundation.
 2. **Network Fabric (`base-vpn`)**: 24/7 NetBird WireGuard mesh VPN connecting all distributed clusters and developer workstations over private overlay IPs (`100.64.0.0/16`).
 3. **Multi-Cluster Control Plane (`base-kube-ops`)**: On-demand Rancher Kubernetes manager (with GCP Instance Schedules for 65–75% cost savings) and ultra-low overhead telemetry (VictoriaMetrics + Grafana Loki).
-4. **Landing Zone Automation (`scripts/`)**: Idempotent bootstrap tooling (`bootstrap_domain.sh`, `check_env.sh`) that provisions new Sovereign Domains in 60 seconds.
+4. **Landing Zone Automation (`scripts/`)**: Idempotent scaffolding and bootstrap tooling (`scaffold_domain.sh`, `bootstrap_domain.sh`, `check_env.sh`) that provisions new Sovereign Domains in 60 seconds.
 
 ---
 
@@ -114,12 +114,18 @@ dpi-base/
 │
 ├── scripts/                       # Platform Automation & Admin Tooling
 │   ├── check_env.sh               # Pre-flight environment & GCP API validator
+│   ├── scaffold_domain.sh         # Local workspace generator from template-mgmt/
 │   └── bootstrap_domain.sh        # Seed bootstrap with --plan & idempotent apply
 │
 ├── docs/                          # Standard Operating Procedures (Runbooks)
 
 │   ├── sop-domain-mgmt.md         # Domain Landing Zone & Management Plane Runbook
 │   └── sop-workload.md            # Workload Project & Compute Lifecycle Runbook
+│
+├── template-mgmt/                 # Reusable Domain Management Template
+│   ├── README.md                  # Management plane runbook for new domains
+│   ├── oauth_setup.md             # Domain OAuth2 / OIDC setup SOP
+│   └── terraform/                 # Reusable Cloud DNS, IAM, Secrets, prj-workload.tf.example
 │
 ├── base-mgmt/                     # GCP Project: base-mgmt (Cloud DNS & Governance)
 │   ├── oauth_setup.md             # Google OAuth2 / OIDC console setup SOP

@@ -49,7 +49,7 @@
 | `1.4` | GCS Remote State Bucket | `gs://base-dpi-ait-ac-th-tfstate` | 🟢 Verified | Singapore (`asia-southeast1`), Object Versioning ON |
 | `1.5` | Flatten Terraform Code Layout | `base-mgmt/terraform/` | 🟢 Verified | Code moved directly to `base-mgmt/terraform/` (13 resources applied) |
 | `1.6` | Pre-flight Environment Validator | `scripts/check_env.sh` | 🟢 Verified | Validates syntax, placeholders, and live GCP auth |
-| `1.7` | Domain Seed Bootstrap Script | `scripts/bootstrap_domain.sh`| 🟢 Verified | Supports `--plan`, idempotent apply, auto-detects paths |
+| `1.7` | Domain Seed Bootstrap Script | `scripts/bootstrap_domain.sh`| 🟢 Verified | Supports `--plan`, idempotent apply, auto-scaffolds `<domain>-mgmt/` from `template-mgmt/` |
 | `1.8` | Root `.env` & `.env.example` Workflow | Root `.env.example` | 🟢 Verified | Sanitized, gitignored, public billing privacy enforced |
 | `1.9` | Deploy GitOps Foundation via Terraform | Project `base-mgmt` | 🟢 Verified | 13 resources deployed (DNS zone, lien, Secret Manager, Folder IAM) |
 | `1.10`| Authoritative Parent DNS Delegation Handshake | `ait-brainlab-mgmt` | 🟢 Verified | Shard E NS records delegated; resolving worldwide |
