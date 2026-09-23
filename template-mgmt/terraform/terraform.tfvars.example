@@ -1,0 +1,20 @@
+# ==============================================================================
+# Sample terraform.tfvars for Domain Management Plane
+# (Auto-generated automatically on Day 0 by scripts/bootstrap_domain.sh)
+# ==============================================================================
+
+project_id         = "example-mgmt"
+region             = "asia-southeast1"
+domain_name        = "example.dpi.ait.ac.th."
+domain_slug        = "example"
+folder_id          = "folders/1234567890"
+
+# Team Collaborators (Folder IAM)
+folder_admins      = [
+  "akraradet@ait.asia",
+  "nuttasit@ait.asia"
+]
+
+folder_members     = []
+
+billing_account_id = "01XXXX-XXXXXX-XXXXXX"

@@ -310,7 +310,7 @@ else
   echo "         --role=\"roles/resourcemanager.organizationAdmin\""
   echo ""
   echo "    2. To grant Billing linking rights:"
-  echo "       In GCP Console -> Billing -> Select '${MASKED_BILLING}' -> Account Management (or Permissions panel)"
+  echo "       In GCP Console -> Billing -> Select '${MASKED_BILLING:-<billing-account-id>}' -> Account Management (or Permissions panel)"
   echo "       Add '${ACTIVE_ACCOUNT:-<your-email>}' with role 'Billing Account User' (roles/billing.user)."
   echo "================================================================="
   exit 1

@@ -1,0 +1,36 @@
+# ==============================================================================
+# 📦 Child Project Envelope Template: prj-<workload>.tf.example
+# ==============================================================================
+# Instructions:
+# 1. Copy this file to prj-<workload>.tf (e.g. prj-api.tf, prj-k3s.tf).
+# 2. Set project_id to "${var.domain_slug}-<workload>" (e.g. "ait-vc-transcripts").
+# 3. Add any required Google Cloud APIs to the workload_services resource.
+# 4. Run 'terraform plan' and 'terraform apply' to provision the project container.
+# ==============================================================================
+
+# 1. Project Container & Billing Association
+resource "google_project" "workload" {
+  name            = "DPI ${var.domain_slug} - Workload"
+  project_id      = "${var.domain_slug}-workload"
+  folder_id       = var.folder_id
+  billing_account = local.billing_account_id # Read dynamically from Secret Manager!
+}
+
+# 2. Enabled APIs for this Tier
+resource "google_project_service" "workload_services" {
+  for_each = toset([
+    "compute.googleapis.com",
+    # "container.googleapis.com", # Enable if using GKE
+  ])
+  project            = google_project.workload.project_id
+  service            = each.key
+  disable_on_destroy = false
+}
+
+# 3. Project Deletion Protection Lien
+resource "google_resource_manager_lien" "workload_lien" {
+  parent       = "projects/${google_project.workload.project_id}"
+  restrictions = ["resourcemanager.projects.delete"]
+  origin       = "terraform"
+  reason       = "Permanent anchor for ${var.domain_slug} Workload project"
+}
