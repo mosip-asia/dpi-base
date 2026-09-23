@@ -128,7 +128,7 @@
 | **Rancher Stack** | K3s `v1.36.3+k3s1`, cert-manager `v1.21.1`, Rancher `2.15.1` | `/opt/rancher` (`base-kube-ops-vm`) | 🟢 Healthy; Google SSO (Generic OIDC) |
 | **Rancher NetBird Peer** | `base-kube-ops-vm` = `100.70.173.242` | NetBird mesh (`100.70.0.0/16`) | 🟢 Connected |
 | **Base Platform Budget** | `base-platform-monthly` (THB 3,500; alerts 50/80/100 %) | Billing "DPI Center - Base Platform" | 🟢 Active |
-| **Domain Management Template** | `template-mgmt/` | Repository Root | 🟢 Available (`scripts/scaffold_domain.sh`) |
+| **Domain Infrastructure Template** | [`mosip-asia/domain-infra-template`](https://github.com/mosip-asia/domain-infra-template) | GitHub Template Repository | 🟢 Published Live |
 
 ---
 
@@ -138,8 +138,9 @@
    - **OAuth Consent Screen**: Publish the OAuth consent screen in Google Cloud Console so external `@ait.ac.th` and `@gmail.com` accounts can sign into NetBird and Rancher without adding each test user.
    - **Observability Plane**: Open dedicated issue for VictoriaMetrics + Grafana Loki placement (scheduled `base-kube-ops` vs 24/7 `base-vpn`).
    - **Downstream NetBird Rehearsal**: Spin up test downstream node over NetBird mesh ([Issue #14](https://github.com/mosip-asia/dpi-base/issues/14)).
-2. **Sovereign Domain Onboarding (First Demonstrator)**:
-   - Run `./scripts/scaffold_domain.sh ait-vc` and `./scripts/bootstrap_domain.sh` to provision the **AIT Verifiable Credentials (`ait-vc`)** landing zone under Billing Account `DPI Center - AIT Verifiable Credentials`.
+2. **Sovereign Domain Onboardings**:
+   - **Face PAD Infrastructure (`face-pad-infra`)**: Instantiate from [`mosip-asia/domain-infra-template`](https://github.com/mosip-asia/domain-infra-template), run `./scripts/setup_domain.sh face-pad`, and bootstrap under Billing Account `DPI Center - Face PAD Research`.
+   - **AIT Verifiable Credentials (`ait-vc-infra`)**: Provision under Billing Account `DPI Center - AIT Verifiable Credentials`.
 3. **Review & Prioritize Proposals (Unconfirmed)**:
    - [Issue #10](https://github.com/mosip-asia/dpi-base/issues/10): `[GitOps] Configure Terraform Service Account (base-mgmt-terraform) & Workload Identity Federation for base Domain` (`status: unconfirmed`)
-   - [Issue #11](https://github.com/mosip-asia/dpi-base/issues/11): `[Platform] Design and Publish "domain-template" Repository for Sovereign Domain Onboarding` (`status: in progress / template-mgmt delivered`)
+   - [Issue #11](https://github.com/mosip-asia/dpi-base/issues/11): `[Platform] Design and Publish "domain-template" Repository for Sovereign Domain Onboarding` (Closed / Delivered via [`domain-infra-template`](https://github.com/mosip-asia/domain-infra-template))
