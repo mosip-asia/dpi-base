@@ -26,7 +26,7 @@ base-mgmt/
    Managed under Google Cloud Identity Free (Org ID: `350922776586`). Provides sovereign organizational control, centralized IAM policies, and resource hierarchy without recurring subscription fees.
 
 2. **Decoupled Workloads & Compute**:
-   The management plane (`base-mgmt`) is strictly reserved for authoritative Cloud DNS, GCS remote state (`gs://base-dpi-ait-ac-th-tfstate`), root IAM, and shared secrets. Compute workloads run in dedicated tier projects (`base-vpn`, `dpi-kube-ops`, `<domain>-*`).
+   The management plane (`base-mgmt`) is strictly reserved for authoritative Cloud DNS, GCS remote state (`gs://base-dpi-ait-ac-th-tfstate`), root IAM, and shared secrets. Compute workloads run in dedicated tier projects (`base-vpn`, `base-kube-ops`, `<domain>-*`).
 
 3. **Operations Access**:
    Daily administration authenticates using individual university accounts (`akraradet@ait.asia` and `nuttasit@ait.asia`) and dedicated Terraform service accounts (`base-mgmt-terraform`). Root super admin (`admin@dpi.ait.ac.th`) is strictly break-glass.
