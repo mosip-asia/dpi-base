@@ -72,6 +72,8 @@ AI assistants and documentation templates MUST strictly adhere to the DPI domain
 
 - **Billing Account Naming Invariant**:
   All Google Cloud Billing Accounts must strictly adhere to the naming format: `DPI Center - <Team or Grant Name>` (e.g. `DPI Center - Base Platform`, `DPI Center - MOSIP Asia Grant`). This ensures that official Google Cloud PDF tax invoices and prepaid top-up receipts match grant budget lines verbatim for institutional university reimbursement.
+- **Billing Account Ownership Invariant**:
+  The primary owner and permanent administrator of all Google Cloud Billing Accounts must strictly be `admin@dpi.ait.ac.th` (Cloud Identity Super Administrator) with `roles/billing.admin` to ensure institutional ownership, continuity across personnel transitions, and university audit compliance. All new billing accounts must be created using `admin@dpi.ait.ac.th`, which then immediately delegates `roles/billing.admin` to operational administrators (`akraradet@ait.asia`, `nuttasit@ait.asia`) for daily operations and project linking.
 - **Issue-Driven vs. PR-Driven GitOps Standard**:
   1. **Separation of Concerns (Issue vs. PR)**:
      - **GitHub Issue = Specification & Requirements Contract ("WHAT & WHY")**: Defines the problem statement, architecture decisions, acceptance criteria / definition of done, scope boundaries, and high-level milestones. Avoid turning the issue into a micro-commit log or transient scratchpad.

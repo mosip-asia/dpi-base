@@ -43,18 +43,29 @@ Each grant maintains its own dedicated Google Cloud Billing Account for clean fi
    > [!IMPORTANT]
    > **Why Naming Matters**: Google Cloud prints the Billing Account Name verbatim on official monthly PDF invoices and top-up receipts. Having the explicit grant name on receipts allows immediate university reimbursement.
 
-2. **Creation in GCP Console**:
-   - Log into [GCP Console Billing](https://console.cloud.google.com/billing) as an Org Admin or Billing Creator.
+2. **Creation by Super Administrator (`admin@dpi.ait.ac.th`)**:
+   - Log into [GCP Console Billing](https://console.cloud.google.com/billing) as **`admin@dpi.ait.ac.th`** (Cloud Identity Super Administrator).
    - Click **Manage Billing Accounts** → **Create Account**.
-   - Enter the name using the convention above.
-   - Note the **Billing Account ID** (`01XXXX-XXXXXX-XXXXXX`).
+   - Enter the name using the convention above (e.g. `DPI Center - MOSIP Asia Grant`).
+   - Complete billing profile setup and note the **Billing Account ID** (`01XXXX-XXXXXX-XXXXXX`).
+   - *This guarantees permanent institutional ownership under `admin@dpi.ait.ac.th` from Day 0.*
 
-3. **Prepaid Top-Up Workflow (Zero Surprise)**:
-   - In GCP Console, go to **Payment overview** → **Make a payment** (Top-up).
+3. **Delegate Operational Permissions (`akraradet@ait.asia`, `nuttasit@ait.asia`)**:
+   - While still logged in as `admin@dpi.ait.ac.th`, select the newly created billing account.
+   - In the right-hand **Permissions** panel (or **Account Management** tab), click **`+ ADD PRINCIPAL`**.
+   - Add both operational administrators:
+     - **`akraradet@ait.asia`**
+     - **`nuttasit@ait.asia`**
+   - Assign the role: **Billing Account Administrator** (`roles/billing.admin`).
+   - Click **Save**.
+   - *Operating administrators can now manage payments, link child projects, and execute Day-0 bootstrap CLI tooling without using the break-glass root account.*
+
+4. **Prepaid Top-Up Workflow (Zero Surprise)**:
+   - Go to **Payment overview** → **Make a payment** (Top-up).
    - Pay the approved quarterly grant amount (e.g. $150.00) using the PI or team credit card.
    - Download the instant PDF receipt and submit it to AIT Finance for reimbursement.
 
-4. **Configure Budget Alerts**:
+5. **Configure Budget Alerts**:
    - Set automated budget threshold alerts at 50%, 80%, and 100% of the prepaid balance to guarantee zero runaway spend.
 
 ---
@@ -74,7 +85,7 @@ Before running the bootstrap, understand exactly what inputs are consumed and wh
 | **Authentication** | **Active `gcloud` Account** | Authenticated as an Org Admin (e.g. `akraradet@ait.asia`) via `gcloud auth login`. |
 | | **ADC Credentials** | Local Application Default Credentials via `gcloud auth application-default login`. |
 | | **IAM Permissions** | `roles/resourcemanager.organizationAdmin` (or `folderCreator` + `projectCreator`) on Org `350922776586`. |
-| | **Billing Permission** | `roles/billing.admin` or `roles/billing.user` on the target billing account. |
+| | **Billing Permission** | `roles/billing.admin` or `roles/billing.user` on the target billing account (owned by `admin@dpi.ait.ac.th`). |
 | **Domain Identity** | **`DOMAIN_NAME`** | Unique domain slug (e.g. `mosip-asia`). Lowercase alphanumeric + hyphens, max 24 characters. |
 | **Billing** | **`BILLING_ACCOUNT_ID`** | Active GCP Billing Account ID (`01XXXX-XXXXXX-XXXXXX`) created in Step 1. |
 | **Hierarchy (Optional)**| **`ORGANIZATION_ID`** | Target Google Cloud Org ID (defaults to `350922776586` for `dpi.ait.ac.th`). |
