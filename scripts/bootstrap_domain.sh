@@ -150,39 +150,32 @@ REGION="${REGION:-asia-southeast1}"
 FOLDER_ADMINS="${FOLDER_ADMINS:-akraradet@ait.asia,nuttasit@ait.asia}"
 FOLDER_MEMBERS="${FOLDER_MEMBERS:-}"
 
-# --- 2. Auto-Rename Template Folder if present ---
-if [[ -d "${REPO_ROOT}/template-mgmt" ]]; then
-  if [[ "${PLAN_MODE}" == "true" ]]; then
-    echo "==> [PLAN] Would rename template-mgmt/ to ${DOMAIN_NAME}-mgmt/"
-  else
-    echo "==> Renaming template-mgmt/ to ${DOMAIN_NAME}-mgmt/..."
-    mv "${REPO_ROOT}/template-mgmt" "${REPO_ROOT}/${DOMAIN_NAME}-mgmt"
-  fi
-fi
-
-# --- 3. Auto-Detect Target Terraform Directory ---
-TARGET_TF_DIR=""
-if [[ -d "${REPO_ROOT}/${DOMAIN_NAME}-mgmt/terraform" ]]; then
-  TARGET_TF_DIR="${REPO_ROOT}/${DOMAIN_NAME}-mgmt/terraform"
-elif [[ -d "${REPO_ROOT}/base-mgmt/terraform" ]]; then
-  TARGET_TF_DIR="${REPO_ROOT}/base-mgmt/terraform"
-elif [[ -d "${REPO_ROOT}/dpi-mgmt/terraform" ]]; then
-  TARGET_TF_DIR="${REPO_ROOT}/dpi-mgmt/terraform"
-elif [[ -d "${REPO_ROOT}/mgmt/terraform" ]]; then
-  TARGET_TF_DIR="${REPO_ROOT}/mgmt/terraform"
-else
-  TARGET_TF_DIR="${REPO_ROOT}"
-fi
-
-OUTPUT_TFVARS_PATH="${TARGET_TF_DIR}/terraform.tfvars"
-TARGET_TF_REL="${TARGET_TF_DIR#"${REPO_ROOT}/"}"
-
 readonly PROJECT_ID="${DOMAIN_NAME}-mgmt"
 PARENT_SLUG="${PARENT_DOMAIN//./-}"
 STATE_BUCKET="${STATE_BUCKET:-${DOMAIN_NAME}-${PARENT_SLUG}-tfstate}"
 readonly BUCKET_NAME="${STATE_BUCKET}"
 readonly SUBDOMAIN="${DOMAIN_NAME}.${PARENT_DOMAIN}"
 readonly MASKED_BILLING="${BILLING_ACCOUNT_ID:0:6}-XXXXXX-${BILLING_ACCOUNT_ID:15:6}"
+
+# --- 2. Determine Target Management and Terraform Directories ---
+TARGET_MGMT_DIR="${REPO_ROOT}/${DOMAIN_NAME}-mgmt"
+TARGET_TF_DIR="${TARGET_MGMT_DIR}/terraform"
+
+# Fallback auto-detection if target dir doesn't exist and template is absent
+if [[ ! -d "${TARGET_TF_DIR}" && ! -d "${REPO_ROOT}/template-mgmt" ]]; then
+  if [[ -d "${REPO_ROOT}/base-mgmt/terraform" ]]; then
+    TARGET_TF_DIR="${REPO_ROOT}/base-mgmt/terraform"
+  elif [[ -d "${REPO_ROOT}/dpi-mgmt/terraform" ]]; then
+    TARGET_TF_DIR="${REPO_ROOT}/dpi-mgmt/terraform"
+  elif [[ -d "${REPO_ROOT}/mgmt/terraform" ]]; then
+    TARGET_TF_DIR="${REPO_ROOT}/mgmt/terraform"
+  else
+    TARGET_TF_DIR="${REPO_ROOT}"
+  fi
+fi
+
+OUTPUT_TFVARS_PATH="${TARGET_TF_DIR}/terraform.tfvars"
+TARGET_TF_REL="${TARGET_TF_DIR#"${REPO_ROOT}/"}"
 
 # Header
 echo "================================================================="
@@ -233,9 +226,27 @@ plan_nochange() {
   PLAN_NOCHANGE=$((PLAN_NOCHANGE + 1))
 }
 
-# --- 4. Check / Plan / Create GCP Folder ---
+# --- 4. Evaluate & Scaffold Local Management Plane Directory ---
 echo ""
-echo "==> Step 2: Evaluating GCP Folder '${DOMAIN_NAME}' under Org ${ORGANIZATION_ID}..."
+echo "==> Step 2: Evaluating Local Management Plane Scaffolding..."
+if [[ -d "${TARGET_MGMT_DIR}" ]]; then
+  if [[ "${PLAN_MODE}" == "true" ]]; then
+    plan_nochange "Local Dir" "Management directory already exists: ${TARGET_MGMT_DIR#"${REPO_ROOT}/"}"
+  else
+    echo -e "    ${COLOR_CYAN}[EXISTS]${COLOR_RESET} Management directory already exists: ${TARGET_MGMT_DIR#"${REPO_ROOT}/"}"
+  fi
+elif [[ -x "${SCRIPT_DIR}/scaffold_domain.sh" ]]; then
+  if [[ "${PLAN_MODE}" == "true" ]]; then
+    plan_action "SCAFFOLD" "Directory '${DOMAIN_NAME}-mgmt/' via scripts/scaffold_domain.sh"
+  else
+    echo "    Invoking scripts/scaffold_domain.sh..."
+    "${SCRIPT_DIR}/scaffold_domain.sh" --env "${ENV_FILE}" "${DOMAIN_NAME}"
+  fi
+fi
+
+# --- 5. Check / Plan / Create GCP Folder ---
+echo ""
+echo "==> Step 3: Evaluating GCP Folder '${DOMAIN_NAME}' under Org ${ORGANIZATION_ID}..."
 EXISTING_FOLDER=$(gcloud resource-manager folders list \
   --organization="${ORGANIZATION_ID}" \
   --filter="displayName='${DOMAIN_NAME}' AND lifecycleState=ACTIVE" \
@@ -267,7 +278,7 @@ FOLDER_NUMERIC_ID="${FOLDER_FULL_ID#folders/}"
 
 # --- 5. Check / Plan / Create Anchor Management Project ---
 echo ""
-echo "==> Step 3: Evaluating Management Project '${PROJECT_ID}'..."
+echo "==> Step 4: Evaluating Management Project '${PROJECT_ID}'..."
 PROJECT_STATE=$(gcloud projects describe "${PROJECT_ID}" --format="value(lifecycleState)" 2>/dev/null || true)
 PROJECT_EXISTS=false
 
@@ -306,7 +317,7 @@ fi
 
 # --- 6. Check / Plan / Link Billing Account ---
 echo ""
-echo "==> Step 4: Evaluating Billing Association for '${PROJECT_ID}'..."
+echo "==> Step 5: Evaluating Billing Association for '${PROJECT_ID}'..."
 CURRENT_BILLING=""
 if [[ "${PROJECT_EXISTS}" == "true" ]]; then
   CURRENT_BILLING=$(gcloud billing projects describe "${PROJECT_ID}" --format="value(billingAccountName)" 2>/dev/null || true)
@@ -350,7 +361,7 @@ fi
 
 # --- 7. Check / Plan / Enable Core APIs ---
 echo ""
-echo "==> Step 5: Evaluating Core Seed APIs on '${PROJECT_ID}'..."
+echo "==> Step 6: Evaluating Core Seed APIs on '${PROJECT_ID}'..."
 SEED_APIS=("cloudresourcemanager.googleapis.com" "serviceusage.googleapis.com" "storage.googleapis.com")
 
 if [[ "${PLAN_MODE}" == "true" ]]; then
@@ -382,7 +393,7 @@ fi
 
 # --- 8. Check / Plan / Create Remote State Bucket ---
 echo ""
-echo "==> Step 6: Evaluating Remote State Bucket 'gs://${BUCKET_NAME}'..."
+echo "==> Step 7: Evaluating Remote State Bucket 'gs://${BUCKET_NAME}'..."
 BUCKET_EXISTS=false
 if gcloud storage buckets describe "gs://${BUCKET_NAME}" >/dev/null 2>&1; then
   BUCKET_EXISTS=true
@@ -427,7 +438,7 @@ if [[ -n "${BILLING_ACCOUNT_ID}" && ! "${BILLING_ACCOUNT_ID}" =~ XXXX ]]; then
   if [[ "${PLAN_MODE}" == "true" ]]; then
     echo "==> [PLAN] Would seed secret 'billing-account-id' in Secret Manager (${PROJECT_ID})."
   else
-    echo "==> Seeding 'billing-account-id' in Secret Manager..."
+    echo "==> Step 8: Seeding 'billing-account-id' in Secret Manager..."
     gcloud services enable secretmanager.googleapis.com --project="${PROJECT_ID}" >/dev/null 2>&1 || true
     if ! gcloud secrets describe billing-account-id --project="${PROJECT_ID}" >/dev/null 2>&1; then
       gcloud secrets create billing-account-id --project="${PROJECT_ID}" --replication-policy=automatic >/dev/null 2>&1 || true
@@ -460,7 +471,7 @@ format_hcl_array() {
 ADMINS_HCL=$(format_hcl_array "${FOLDER_ADMINS}")
 MEMBERS_HCL=$(format_hcl_array "${FOLDER_MEMBERS}")
 
-# --- 10. Generate terraform.tfvars Content ---
+# --- 11. Generate terraform.tfvars Content ---
 TFVARS_CONTENT=$(cat <<EOF
 # ==============================================================================
 # Auto-generated by bootstrap_domain.sh from: ${ENV_FILE}
@@ -468,10 +479,11 @@ TFVARS_CONTENT=$(cat <<EOF
 # Generated at       : $(date -u +"%Y-%m-%dT%H:%M:%SZ")
 # ==============================================================================
 
-project_id     = "${PROJECT_ID}"
-region         = "${REGION}"
-domain_name    = "${SUBDOMAIN}."
-folder_id      = "${FOLDER_FULL_ID}"
+project_id         = "${PROJECT_ID}"
+region             = "${REGION}"
+domain_name        = "${SUBDOMAIN}."
+domain_slug        = "${DOMAIN_NAME}"
+folder_id          = "${FOLDER_FULL_ID}"
 
 # Team Collaborators (Folder IAM)
 folder_admins = [
